@@ -11,7 +11,7 @@ npm install @nikelroot/video-player
 Peer dependencies:
 
 ```bash
-npm install react react-dom antd @ant-design/icons styled-components
+npm install react react-dom styled-components
 ```
 
 ## Usage

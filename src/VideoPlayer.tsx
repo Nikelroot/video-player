@@ -209,6 +209,15 @@ const clampTime = (time: number, duration: number) => {
   return safeDuration > 0 ? Math.max(0, Math.min(safeTime, safeDuration)) : Math.max(0, safeTime);
 };
 
+const isLikelyHlsSource = (src: string) => {
+  try {
+    const url = new URL(src, 'http://video-player.local');
+    return /\.m3u8$/i.test(url.pathname) || /\.m3u8($|[?#])/i.test(src);
+  } catch {
+    return /\.m3u8($|[?#])/i.test(src);
+  }
+};
+
 const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoPlayerHandle>) => {
   const {
     controlsVariant = 'none',
@@ -535,10 +544,16 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   }, [hlsConfig, hlsCredentials, live, liveHlsConfig, vodHlsConfig]);
 
   const loadVideo = useCallback(
-    async (startAt: number = 0) => {
+    async (startAt: number = initialTime) => {
       const startVideoRef = videoRef.current;
       if (!startVideoRef) return;
-      const HlsCtor = await loadHlsCtor();
+      let HlsCtor: typeof Hls;
+      try {
+        HlsCtor = await loadHlsCtor();
+      } catch (error) {
+        reportError(error, { type: 'hls-loader', src: videoSrc }, messages.streamLoadFailed);
+        return;
+      }
       if (!videoRef.current || videoRef.current !== startVideoRef) return;
       const video = videoRef.current;
       if (!video) return;
@@ -641,7 +656,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
         void loadVideo(resumeTime);
       });
 
-      h.attachMedia(video);
       h.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
         h.loadSource(videoSrc);
       });
@@ -657,11 +671,13 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
         }
         if (autoPlay) void playAction();
       });
+      h.attachMedia(video);
     },
     [
       autoPlay,
       clearErrorState,
       clearTimers,
+      initialTime,
       live,
       messages.streamDecodeFailed,
       messages.streamLoadFailed,
@@ -686,19 +702,25 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const loadVideoHls = useCallback(async () => {
     const video = videoRef.current;
     const canNativeHls = !!video?.canPlayType && video.canPlayType('application/vnd.apple.mpegurl') !== '';
-    const HlsCtor = await loadHlsCtor();
+    let HlsCtor: typeof Hls;
+    try {
+      HlsCtor = await loadHlsCtor();
+    } catch (error) {
+      reportError(error, { type: 'hls-loader', src: videoSrc }, messages.streamLoadFailed);
+      return;
+    }
     if (!videoRef.current || videoRef.current !== video) return;
 
     if (HlsCtor.isSupported()) {
-      void loadVideo();
+      void loadVideo(initialTime);
       return;
     }
     if (canNativeHls) {
       loadVideoNative();
       return;
     }
-    void loadVideo();
-  }, [loadVideo, loadVideoNative]);
+    reportError(null, { type: 'hls', src: videoSrc, reason: 'HLS is not supported in this browser' }, messages.unsupported);
+  }, [initialTime, loadVideo, loadVideoNative, messages.streamLoadFailed, messages.unsupported, reportError, videoSrc]);
 
   const destroy = useCallback(() => {
     clearTimers();
@@ -859,8 +881,9 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     }
 
     if (sourceType === 'native' || type === 'video') loadVideoNative();
-    else if (sourceType === 'hls') void loadVideo();
-    else void loadVideoHls();
+    else if (sourceType === 'hls') void loadVideo(initialTime);
+    else if (isLikelyHlsSource(videoSrc)) void loadVideoHls();
+    else loadVideoNative();
 
     return () => {
       clearTimers();
@@ -875,6 +898,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     loadVideo,
     loadVideoHls,
     loadVideoNative,
+    initialTime,
     reloadKey,
     reloadToken,
     sourceType,
@@ -1000,7 +1024,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
         variant={controlsVariant}
         fullScreenAction={fullScreenAction}
         showControl={showControl}
-        videoRef={videoRef}
         playAction={playAction}
         pauseAction={pauseAction}
         seekSetTime={seekSetTime}

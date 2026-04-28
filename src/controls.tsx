@@ -1,17 +1,6 @@
 'use client';
 
-import type { MouseEvent, ReactNode, RefObject } from 'react';
-import { Flex, Button, Slider, Typography } from 'antd';
-import type { SliderSingleProps } from 'antd';
-import {
-  BackwardFilled,
-  FastForwardFilled,
-  FullscreenOutlined,
-  MutedFilled,
-  PauseOutlined,
-  PlaySquareFilled,
-  SoundFilled,
-} from '@ant-design/icons';
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { SeekSliderStyled, VideoPlayerControlStyles } from './styles';
 import { formatTime, useWindowWidth } from './utils';
 
@@ -25,10 +14,6 @@ interface SeekSliderProps {
 }
 
 const SeekSlider = ({ playAction, duration, currentTime, seekSetTime }: SeekSliderProps) => {
-  const formatter: NonNullable<SliderSingleProps['tooltip']>['formatter'] = (value) => {
-    return formatTime(Number(value ?? 0));
-  };
-
   const clickHandler = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -36,18 +21,27 @@ const SeekSlider = ({ playAction, duration, currentTime, seekSetTime }: SeekSlid
 
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   const safeCurrentTime = Math.max(0, Math.min(Number.isFinite(currentTime) ? currentTime : 0, safeDuration || Infinity));
+  const completeChange = () => {
+    void playAction();
+  };
 
   return (
     <SeekSliderStyled onClick={clickHandler} className="seek-slider">
-      <Slider
-        onChange={seekSetTime}
-        onChangeComplete={() => {
-          void playAction();
-        }}
-        value={safeCurrentTime}
-        tooltip={{ formatter }}
+      <input
+        aria-label="Seek"
+        className="seek-range"
+        disabled={safeDuration <= 0}
         max={safeDuration}
-        keyboard={false}
+        min={0}
+        onChange={(e) => seekSetTime(Number(e.currentTarget.value))}
+        onKeyUp={(e: KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === 'Enter' || e.key === ' ') completeChange();
+        }}
+        onPointerUp={completeChange}
+        step="any"
+        type="range"
+        value={safeCurrentTime}
+        title={formatTime(safeCurrentTime)}
       />
     </SeekSliderStyled>
   );
@@ -55,9 +49,79 @@ const SeekSlider = ({ playAction, duration, currentTime, seekSetTime }: SeekSlid
 
 const TimeBlock = ({ duration, currentTime }: { duration: number; currentTime: number }) => {
   return (
-    <Typography.Text style={{ color: '#fff', whiteSpace: 'nowrap' }}>
+    <span className="video-player-time">
       {formatTime(currentTime)} / {formatTime(duration)}
-    </Typography.Text>
+    </span>
+  );
+};
+
+type IconName = 'back' | 'forward' | 'fullscreen' | 'mute' | 'pause' | 'play' | 'sound';
+
+const Icon = ({ name }: { name: IconName }) => {
+  const paths: Record<IconName, ReactNode> = {
+    back: (
+      <>
+        <path d="M11 7l-6 5 6 5V7z" />
+        <path d="M19 7l-6 5 6 5V7z" />
+      </>
+    ),
+    forward: (
+      <>
+        <path d="M5 7l6 5-6 5V7z" />
+        <path d="M13 7l6 5-6 5V7z" />
+      </>
+    ),
+    fullscreen: (
+      <>
+        <path d="M5 10V5h5" />
+        <path d="M14 5h5v5" />
+        <path d="M19 14v5h-5" />
+        <path d="M10 19H5v-5" />
+      </>
+    ),
+    mute: (
+      <>
+        <path d="M4 10v4h4l5 4V6l-5 4H4z" />
+        <path d="M17 9l4 6" />
+        <path d="M21 9l-4 6" />
+      </>
+    ),
+    pause: (
+      <>
+        <path d="M8 6h3v12H8z" />
+        <path d="M13 6h3v12h-3z" />
+      </>
+    ),
+    play: <path d="M8 5v14l11-7L8 5z" />,
+    sound: (
+      <>
+        <path d="M4 10v4h4l5 4V6l-5 4H4z" />
+        <path d="M16 9a4 4 0 010 6" />
+        <path d="M18.5 6.5a8 8 0 010 11" />
+      </>
+    ),
+  };
+
+  return (
+    <svg aria-hidden="true" className="video-player-icon" focusable="false" viewBox="0 0 24 24">
+      {paths[name]}
+    </svg>
+  );
+};
+
+const ControlButton = ({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: IconName;
+  label: string;
+  onClick: () => void | Promise<void>;
+}) => {
+  return (
+    <button aria-label={label} className="video-player-control-button" onClick={() => void onClick()} title={label} type="button">
+      <Icon name={icon} />
+    </button>
   );
 };
 
@@ -65,7 +129,6 @@ export interface VideoPlayerControlsProps {
   variant: ControlsVariant;
   fullScreenAction: () => void;
   showControl: boolean;
-  videoRef: RefObject<HTMLVideoElement | null>;
   playAction: () => void | Promise<void>;
   pauseAction: () => void;
   seekSetTime: (time: number) => void;
@@ -89,7 +152,6 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
     variant,
     fullScreenAction,
     showControl,
-    videoRef,
     playAction,
     pauseAction,
     seekSetTime,
@@ -105,15 +167,14 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
   const [, isMobile] = useWindowWidth();
 
   if (variant === 'none') return null;
-  if (!videoRef.current) return null;
 
   if (variant === 'tiny') {
     return (
       <VideoPlayerControlStyles $tiny $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
-        <Flex gap="small" align="center" justify="space-between">
+        <div className="video-player-control-row">
           <div className="full" />
           <SeekSlider playAction={playAction} duration={duration} currentTime={currentTime} seekSetTime={seekSetTime} />
-        </Flex>
+        </div>
       </VideoPlayerControlStyles>
     );
   }
@@ -121,34 +182,34 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
   if (variant === 'fullscreen-only') {
     return (
       <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
-        <Flex gap="small" align="center" justify="space-between">
+        <div className="video-player-control-row">
           <div className="full" />
-          <Button size="small" onClick={() => onMutedChange(!muted)} icon={muted ? <MutedFilled /> : <SoundFilled />} />
-          <Button size="small" onClick={fullScreenAction} icon={<FullscreenOutlined />} />
-        </Flex>
+          <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
+          <ControlButton icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
+        </div>
       </VideoPlayerControlStyles>
     );
   }
 
   return (
     <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
-      <Flex gap="small" align="center" justify="space-between">
+      <div className="video-player-control-row">
         {playing ? (
-          <Button size="small" onClick={() => pauseAction()} icon={<PauseOutlined />} />
+          <ControlButton icon="pause" label="Pause" onClick={pauseAction} />
         ) : (
-          <Button size="small" onClick={() => playAction()} icon={<PlaySquareFilled />} />
+          <ControlButton icon="play" label="Play" onClick={playAction} />
         )}
-        <Button size="small" onClick={() => seekPrevAction()} icon={<BackwardFilled />} />
-        <Button size="small" onClick={() => seekNextAction()} icon={<FastForwardFilled />} />
-        <Typography.Text ellipsis className="video-player-control-title">
+        <ControlButton icon="back" label="Back 15 seconds" onClick={() => seekPrevAction()} />
+        <ControlButton icon="forward" label="Forward 15 seconds" onClick={() => seekNextAction()} />
+        <span className="video-player-control-title" title={typeof title === 'string' ? title : undefined}>
           {title}
-        </Typography.Text>
+        </span>
         <div className="full" />
         <SeekSlider playAction={playAction} duration={duration} currentTime={currentTime} seekSetTime={seekSetTime} />
         <TimeBlock duration={duration} currentTime={currentTime} />
-        <Button size="small" onClick={() => onMutedChange(!muted)} icon={muted ? <MutedFilled /> : <SoundFilled />} />
-        <Button size="small" onClick={fullScreenAction} icon={<FullscreenOutlined />} />
-      </Flex>
+        <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
+        <ControlButton icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
+      </div>
     </VideoPlayerControlStyles>
   );
 };

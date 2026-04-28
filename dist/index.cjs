@@ -39,13 +39,9 @@ module.exports = __toCommonJS(index_exports);
 // src/VideoPlayer.tsx
 var import_react2 = require("react");
 
-// src/controls.tsx
-var import_antd = require("antd");
-var import_icons = require("@ant-design/icons");
-
 // src/styles.ts
-var import_styled_components = __toESM(require("styled-components"), 1);
-var VideoPlayerControlStyles = import_styled_components.default.div`
+var import_styled_components = require("styled-components");
+var VideoPlayerControlStyles = import_styled_components.styled.div`
   position: absolute;
   left: 0;
   right: 0;
@@ -62,13 +58,61 @@ var VideoPlayerControlStyles = import_styled_components.default.div`
     flex: 1 auto;
   }
 
+  .video-player-control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+  }
+
+  .video-player-control-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .video-player-control-button:hover,
+  .video-player-control-button:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
+    outline: none;
+  }
+
+  .video-player-icon {
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .video-player-control-title {
     color: #fff;
     max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .video-player-time {
+    color: #fff;
+    white-space: nowrap;
+    font-size: 14px;
   }
 
   ${(props) => !props.$showControl && import_styled_components.css`
-      .ant-flex {
+      .video-player-control-row {
         > * {
           opacity: 0;
           display: none;
@@ -85,7 +129,7 @@ var VideoPlayerControlStyles = import_styled_components.default.div`
       padding: 0;
     `};
 `;
-var VideoPlayerStyles = import_styled_components.default.div`
+var VideoPlayerStyles = import_styled_components.styled.div`
   position: relative;
   aspect-ratio: 16 / 9;
   max-height: 100%;
@@ -240,42 +284,25 @@ var VideoPlayerStyles = import_styled_components.default.div`
       }
     `};
 `;
-var SeekSliderStyled = import_styled_components.default.div`
+var SeekSliderStyled = import_styled_components.styled.div`
   position: absolute;
   left: 0;
   right: 0;
   top: -12px;
 
-  .ant-slider-rail {
+  .seek-range {
+    display: block;
+    width: 100%;
     height: 20px;
-    top: auto;
-    bottom: 0;
-    background: transparent !important;
-  }
-
-  .ant-slider {
-    &:hover {
-      .ant-slider-rail {
-        background: transparent !important;
-      }
-    }
-  }
-
-  .ant-slider-track {
-    top: 6px;
-  }
-
-  .ant-slider-handle {
-    top: 3px;
-  }
-
-  .ant-slider-step {
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .ant-slider {
     margin: 0;
+    accent-color: #fff;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .seek-range:disabled {
+    cursor: default;
+    opacity: 0.65;
   }
 `;
 
@@ -384,35 +411,82 @@ var createThrottledNumberFn = (fn, waitMs) => {
 // src/controls.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
-  const formatter = (value) => {
-    return formatTime(Number(value != null ? value : 0));
-  };
   const clickHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
   };
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   const safeCurrentTime = Math.max(0, Math.min(Number.isFinite(currentTime) ? currentTime : 0, safeDuration || Infinity));
+  const completeChange = () => {
+    void playAction();
+  };
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSliderStyled, { onClick: clickHandler, className: "seek-slider", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    import_antd.Slider,
+    "input",
     {
-      onChange: seekSetTime,
-      onChangeComplete: () => {
-        void playAction();
-      },
-      value: safeCurrentTime,
-      tooltip: { formatter },
+      "aria-label": "Seek",
+      className: "seek-range",
+      disabled: safeDuration <= 0,
       max: safeDuration,
-      keyboard: false
+      min: 0,
+      onChange: (e) => seekSetTime(Number(e.currentTarget.value)),
+      onKeyUp: (e) => {
+        if (e.key === "Enter" || e.key === " ") completeChange();
+      },
+      onPointerUp: completeChange,
+      step: "any",
+      type: "range",
+      value: safeCurrentTime,
+      title: formatTime(safeCurrentTime)
     }
   ) });
 };
 var TimeBlock = ({ duration, currentTime }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_antd.Typography.Text, { style: { color: "#fff", whiteSpace: "nowrap" }, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "video-player-time", children: [
     formatTime(currentTime),
     " / ",
     formatTime(duration)
   ] });
+};
+var Icon = ({ name }) => {
+  const paths = {
+    back: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M11 7l-6 5 6 5V7z" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M19 7l-6 5 6 5V7z" })
+    ] }),
+    forward: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M5 7l6 5-6 5V7z" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M13 7l6 5-6 5V7z" })
+    ] }),
+    fullscreen: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M5 10V5h5" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M14 5h5v5" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M19 14v5h-5" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M10 19H5v-5" })
+    ] }),
+    mute: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M17 9l4 6" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M21 9l-4 6" })
+    ] }),
+    pause: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M8 6h3v12H8z" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M13 6h3v12h-3z" })
+    ] }),
+    play: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M8 5v14l11-7L8 5z" }),
+    sound: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M16 9a4 4 0 010 6" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M18.5 6.5a8 8 0 010 11" })
+    ] })
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { "aria-hidden": "true", className: "video-player-icon", focusable: "false", viewBox: "0 0 24 24", children: paths[name] });
+};
+var ControlButton = ({
+  icon,
+  label,
+  onClick
+}) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { "aria-label": label, className: "video-player-control-button", onClick: () => void onClick(), title: label, type: "button", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { name: icon }) });
 };
 var stopControlClick = (e) => {
   e.preventDefault();
@@ -423,7 +497,6 @@ var VideoPlayerControls = (props) => {
     variant,
     fullScreenAction,
     showControl,
-    videoRef,
     playAction,
     pauseAction,
     seekSetTime,
@@ -438,30 +511,29 @@ var VideoPlayerControls = (props) => {
   } = props;
   const [, isMobile] = useWindowWidth();
   if (variant === "none") return null;
-  if (!videoRef.current) return null;
   if (variant === "tiny") {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_antd.Flex, { gap: "small", align: "center", justify: "space-between", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSlider, { playAction, duration, currentTime, seekSetTime })
     ] }) });
   }
   if (variant === "fullscreen-only") {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_antd.Flex, { gap: "small", align: "center", justify: "space-between", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => onMutedChange(!muted), icon: muted ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.MutedFilled, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.SoundFilled, {}) }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: fullScreenAction, icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.FullscreenOutlined, {}) })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
     ] }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_antd.Flex, { gap: "small", align: "center", justify: "space-between", children: [
-    playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => pauseAction(), icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.PauseOutlined, {}) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => playAction(), icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.PlaySquareFilled, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => seekPrevAction(), icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.BackwardFilled, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => seekNextAction(), icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.FastForwardFilled, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Typography.Text, { ellipsis: true, className: "video-player-control-title", children: title }),
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
+    playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "pause", label: "Pause", onClick: pauseAction }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "play", label: "Play", onClick: playAction }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "back", label: "Back 15 seconds", onClick: () => seekPrevAction() }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "forward", label: "Forward 15 seconds", onClick: () => seekNextAction() }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "video-player-control-title", title: typeof title === "string" ? title : void 0, children: title }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSlider, { playAction, duration, currentTime, seekSetTime }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TimeBlock, { duration, currentTime }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: () => onMutedChange(!muted), icon: muted ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.MutedFilled, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.SoundFilled, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_antd.Button, { size: "small", onClick: fullScreenAction, icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_icons.FullscreenOutlined, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
   ] }) });
 };
 
@@ -659,6 +731,14 @@ var clampTime = (time, duration) => {
   const safeTime = Number.isFinite(time) ? time : 0;
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   return safeDuration > 0 ? Math.max(0, Math.min(safeTime, safeDuration)) : Math.max(0, safeTime);
+};
+var isLikelyHlsSource = (src) => {
+  try {
+    const url = new URL(src, "http://video-player.local");
+    return /\.m3u8$/i.test(url.pathname) || /\.m3u8($|[?#])/i.test(src);
+  } catch {
+    return /\.m3u8($|[?#])/i.test(src);
+  }
 };
 var VideoPlayerBase = (props, ref) => {
   const {
@@ -943,10 +1023,16 @@ var VideoPlayerBase = (props, ref) => {
     );
   }, [hlsConfig, hlsCredentials, live, liveHlsConfig, vodHlsConfig]);
   const loadVideo = (0, import_react2.useCallback)(
-    async (startAt = 0) => {
+    async (startAt = initialTime) => {
       const startVideoRef = videoRef.current;
       if (!startVideoRef) return;
-      const HlsCtor = await loadHlsCtor();
+      let HlsCtor;
+      try {
+        HlsCtor = await loadHlsCtor();
+      } catch (error) {
+        reportError(error, { type: "hls-loader", src: videoSrc }, messages.streamLoadFailed);
+        return;
+      }
       if (!videoRef.current || videoRef.current !== startVideoRef) return;
       const video = videoRef.current;
       if (!video) return;
@@ -1040,7 +1126,6 @@ var VideoPlayerBase = (props, ref) => {
         }
         void loadVideo(resumeTime);
       });
-      h.attachMedia(video);
       h.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
         h.loadSource(videoSrc);
       });
@@ -1056,11 +1141,13 @@ var VideoPlayerBase = (props, ref) => {
         }
         if (autoPlay) void playAction();
       });
+      h.attachMedia(video);
     },
     [
       autoPlay,
       clearErrorState,
       clearTimers,
+      initialTime,
       live,
       messages.streamDecodeFailed,
       messages.streamLoadFailed,
@@ -1082,18 +1169,24 @@ var VideoPlayerBase = (props, ref) => {
   const loadVideoHls = (0, import_react2.useCallback)(async () => {
     const video = videoRef.current;
     const canNativeHls = !!(video == null ? void 0 : video.canPlayType) && video.canPlayType("application/vnd.apple.mpegurl") !== "";
-    const HlsCtor = await loadHlsCtor();
+    let HlsCtor;
+    try {
+      HlsCtor = await loadHlsCtor();
+    } catch (error) {
+      reportError(error, { type: "hls-loader", src: videoSrc }, messages.streamLoadFailed);
+      return;
+    }
     if (!videoRef.current || videoRef.current !== video) return;
     if (HlsCtor.isSupported()) {
-      void loadVideo();
+      void loadVideo(initialTime);
       return;
     }
     if (canNativeHls) {
       loadVideoNative();
       return;
     }
-    void loadVideo();
-  }, [loadVideo, loadVideoNative]);
+    reportError(null, { type: "hls", src: videoSrc, reason: "HLS is not supported in this browser" }, messages.unsupported);
+  }, [initialTime, loadVideo, loadVideoNative, messages.streamLoadFailed, messages.unsupported, reportError, videoSrc]);
   const destroy = (0, import_react2.useCallback)(() => {
     clearTimers();
     if (hlsRef.current) {
@@ -1224,8 +1317,9 @@ var VideoPlayerBase = (props, ref) => {
       hlsRef.current = null;
     }
     if (sourceType === "native" || type === "video") loadVideoNative();
-    else if (sourceType === "hls") void loadVideo();
-    else void loadVideoHls();
+    else if (sourceType === "hls") void loadVideo(initialTime);
+    else if (isLikelyHlsSource(videoSrc)) void loadVideoHls();
+    else loadVideoNative();
     return () => {
       clearTimers();
       if (hlsRef.current) {
@@ -1239,6 +1333,7 @@ var VideoPlayerBase = (props, ref) => {
     loadVideo,
     loadVideoHls,
     loadVideoNative,
+    initialTime,
     reloadKey,
     reloadToken,
     sourceType,
@@ -1334,7 +1429,6 @@ var VideoPlayerBase = (props, ref) => {
             variant: controlsVariant,
             fullScreenAction,
             showControl,
-            videoRef,
             playAction,
             pauseAction,
             seekSetTime,

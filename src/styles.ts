@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import { css, styled } from 'styled-components';
 
 export const VideoPlayerControlStyles = styled.div<{
   $isMobile?: boolean;
@@ -23,15 +23,63 @@ export const VideoPlayerControlStyles = styled.div<{
     flex: 1 auto;
   }
 
+  .video-player-control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+  }
+
+  .video-player-control-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .video-player-control-button:hover,
+  .video-player-control-button:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
+    outline: none;
+  }
+
+  .video-player-icon {
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .video-player-control-title {
     color: #fff;
     max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .video-player-time {
+    color: #fff;
+    white-space: nowrap;
+    font-size: 14px;
   }
 
   ${(props) =>
     !props.$showControl &&
     css`
-      .ant-flex {
+      .video-player-control-row {
         > * {
           opacity: 0;
           display: none;
@@ -228,35 +276,18 @@ export const SeekSliderStyled = styled.div`
   right: 0;
   top: -12px;
 
-  .ant-slider-rail {
+  .seek-range {
+    display: block;
+    width: 100%;
     height: 20px;
-    top: auto;
-    bottom: 0;
-    background: transparent !important;
-  }
-
-  .ant-slider {
-    &:hover {
-      .ant-slider-rail {
-        background: transparent !important;
-      }
-    }
-  }
-
-  .ant-slider-track {
-    top: 6px;
-  }
-
-  .ant-slider-handle {
-    top: 3px;
-  }
-
-  .ant-slider-step {
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .ant-slider {
     margin: 0;
+    accent-color: #fff;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .seek-range:disabled {
+    cursor: default;
+    opacity: 0.65;
   }
 `;
