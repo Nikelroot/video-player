@@ -442,39 +442,39 @@ var TimeBlock = ({ duration, currentTime }) => {
     formatTime(duration)
   ] });
 };
+var ICON_PATHS = {
+  back: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M11 7l-6 5 6 5V7z" }),
+    /* @__PURE__ */ jsx("path", { d: "M19 7l-6 5 6 5V7z" })
+  ] }),
+  forward: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M5 7l6 5-6 5V7z" }),
+    /* @__PURE__ */ jsx("path", { d: "M13 7l6 5-6 5V7z" })
+  ] }),
+  fullscreen: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M5 10V5h5" }),
+    /* @__PURE__ */ jsx("path", { d: "M14 5h5v5" }),
+    /* @__PURE__ */ jsx("path", { d: "M19 14v5h-5" }),
+    /* @__PURE__ */ jsx("path", { d: "M10 19H5v-5" })
+  ] }),
+  mute: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
+    /* @__PURE__ */ jsx("path", { d: "M17 9l4 6" }),
+    /* @__PURE__ */ jsx("path", { d: "M21 9l-4 6" })
+  ] }),
+  pause: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M8 6h3v12H8z" }),
+    /* @__PURE__ */ jsx("path", { d: "M13 6h3v12h-3z" })
+  ] }),
+  play: /* @__PURE__ */ jsx("path", { d: "M8 5v14l11-7L8 5z" }),
+  sound: /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
+    /* @__PURE__ */ jsx("path", { d: "M16 9a4 4 0 010 6" }),
+    /* @__PURE__ */ jsx("path", { d: "M18.5 6.5a8 8 0 010 11" })
+  ] })
+};
 var Icon = ({ name }) => {
-  const paths = {
-    back: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M11 7l-6 5 6 5V7z" }),
-      /* @__PURE__ */ jsx("path", { d: "M19 7l-6 5 6 5V7z" })
-    ] }),
-    forward: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M5 7l6 5-6 5V7z" }),
-      /* @__PURE__ */ jsx("path", { d: "M13 7l6 5-6 5V7z" })
-    ] }),
-    fullscreen: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M5 10V5h5" }),
-      /* @__PURE__ */ jsx("path", { d: "M14 5h5v5" }),
-      /* @__PURE__ */ jsx("path", { d: "M19 14v5h-5" }),
-      /* @__PURE__ */ jsx("path", { d: "M10 19H5v-5" })
-    ] }),
-    mute: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
-      /* @__PURE__ */ jsx("path", { d: "M17 9l4 6" }),
-      /* @__PURE__ */ jsx("path", { d: "M21 9l-4 6" })
-    ] }),
-    pause: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M8 6h3v12H8z" }),
-      /* @__PURE__ */ jsx("path", { d: "M13 6h3v12h-3z" })
-    ] }),
-    play: /* @__PURE__ */ jsx("path", { d: "M8 5v14l11-7L8 5z" }),
-    sound: /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("path", { d: "M4 10v4h4l5 4V6l-5 4H4z" }),
-      /* @__PURE__ */ jsx("path", { d: "M16 9a4 4 0 010 6" }),
-      /* @__PURE__ */ jsx("path", { d: "M18.5 6.5a8 8 0 010 11" })
-    ] })
-  };
-  return /* @__PURE__ */ jsx("svg", { "aria-hidden": "true", className: "video-player-icon", focusable: "false", viewBox: "0 0 24 24", children: paths[name] });
+  return /* @__PURE__ */ jsx("svg", { "aria-hidden": "true", className: "video-player-icon", focusable: "false", viewBox: "0 0 24 24", children: ICON_PATHS[name] });
 };
 var ControlButton = ({
   disabled,
@@ -799,7 +799,6 @@ var VideoPlayerBase = (props, ref) => {
     scrollTo = true,
     muted: mutedProp,
     defaultMuted = false,
-    currentTime: currentTimeProp,
     duration: durationProp,
     hlsConfig,
     vodHlsConfig,
@@ -834,17 +833,19 @@ var VideoPlayerBase = (props, ref) => {
   const [showControl, setControlVisible] = useState(true);
   const [errorState, setErrorState] = useState(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const showControlRef = useRef2(showControl);
   const playing = playingProp != null ? playingProp : playingState;
   const muted = mutedProp != null ? mutedProp : mutedState;
   const isDurationControlled = durationProp !== void 0;
-  const isCurrentTimeControlled = currentTimeProp !== void 0;
   const duration = durationProp != null ? durationProp : durationState;
-  const currentTime = currentTimeProp != null ? currentTimeProp : currentTimeState;
+  const currentTime = currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
   const onTimeChangeRef = useRef2(onTimeChange);
   const onDurationChangeRef = useRef2(onDurationChange);
   onTimeChangeRef.current = onTimeChange;
   onDurationChangeRef.current = onDurationChange;
+  showControlRef.current = showControl;
+  const { currentTime: _ignoredCurrentTime, ...domVideoProps } = videoProps;
   const setTimeD = useRef2(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
@@ -852,6 +853,7 @@ var VideoPlayerBase = (props, ref) => {
       v.currentTime = value;
     }, 30)
   );
+  const setCurrentTimeUi = useRef2(createThrottledNumberFn((value) => setCurrentTimeState(value), 250));
   const clearTimers = useCallback(() => {
     if (reloadTimer.current) {
       clearTimeout(reloadTimer.current);
@@ -925,9 +927,9 @@ var VideoPlayerBase = (props, ref) => {
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-    if (!isCurrentTimeControlled) setCurrentTimeState(nextTime);
+    setCurrentTimeUi.current(nextTime);
     (_a = onTimeChangeRef.current) == null ? void 0 : _a.call(onTimeChangeRef, nextTime, el);
-  }, [isCurrentTimeControlled]);
+  }, []);
   const onDur = useCallback(() => {
     var _a;
     const el = videoRef.current;
@@ -1008,10 +1010,11 @@ var VideoPlayerBase = (props, ref) => {
       if (!el) return;
       const next = clampTime(value, duration);
       setTimeD.current(next);
-      if (currentTimeProp === void 0) setCurrentTimeState(next);
+      setCurrentTimeUi.current.cancel();
+      setCurrentTimeState(next);
       notifyActiveChange(el, "seek");
     },
-    [currentTimeProp, duration, notifyActiveChange]
+    [duration, notifyActiveChange]
   );
   const seekPrevAction = useCallback(
     (sec = 15) => {
@@ -1259,10 +1262,10 @@ var VideoPlayerBase = (props, ref) => {
     notifyActiveChange(null, "destroy");
     setNextPlaying(false);
     if (durationProp === void 0) setDurationState(0);
-    if (currentTimeProp === void 0) setCurrentTimeState(0);
+    setCurrentTimeUi.current.cancel();
+    setCurrentTimeState(0);
   }, [
     clearTimers,
-    currentTimeProp,
     durationProp,
     notifyActiveChange,
     onDur,
@@ -1324,8 +1327,12 @@ var VideoPlayerBase = (props, ref) => {
   }, [clearErrorState]);
   const mouseMoveHandler = useCallback(() => {
     if (controlTime.current) clearTimeout(controlTime.current);
-    setControlVisible(true);
+    if (!showControlRef.current) {
+      showControlRef.current = true;
+      setControlVisible(true);
+    }
     controlTime.current = setTimeout(() => {
+      showControlRef.current = false;
       setControlVisible(false);
     }, 1e3 * 10);
   }, []);
@@ -1351,12 +1358,6 @@ var VideoPlayerBase = (props, ref) => {
     if (playingProp) void playAction();
     else pauseAction();
   }, [pauseAction, playAction, playingProp]);
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el || currentTimeProp === void 0) return;
-    if (Math.abs(el.currentTime - currentTimeProp) < 0.25) return;
-    el.currentTime = clampTime(currentTimeProp, duration);
-  }, [currentTimeProp, duration]);
   useEffect(() => {
     if (!videoRef.current) return;
     const loadId = sourceLoadId.current + 1;
@@ -1430,6 +1431,7 @@ var VideoPlayerBase = (props, ref) => {
   useEffect(() => {
     return () => {
       setTimeD.current.cancel();
+      setCurrentTimeUi.current.cancel();
       destroy();
     };
   }, [destroy]);
@@ -1471,7 +1473,7 @@ var VideoPlayerBase = (props, ref) => {
           /* @__PURE__ */ jsx2(
             "video",
             {
-              ...videoProps,
+              ...domVideoProps,
               controls: false,
               ref: setVideoEl,
               crossOrigin,

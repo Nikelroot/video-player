@@ -110,7 +110,6 @@ export interface VideoPlayerProps
   defaultPlaying?: boolean;
   playing?: boolean;
   onPlayingChange?: (playing: boolean) => void;
-  currentTime?: number;
   duration?: number;
   onTimeChange?: (time: number, video: HTMLVideoElement) => void;
   onDurationChange?: (duration: number, video: HTMLVideoElement) => void;
@@ -276,7 +275,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     scrollTo = true,
     muted: mutedProp,
     defaultMuted = false,
-    currentTime: currentTimeProp,
     duration: durationProp,
     hlsConfig,
     vodHlsConfig,
@@ -316,18 +314,23 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const [showControl, setControlVisible] = useState(true);
   const [errorState, setErrorState] = useState<VideoErrorState | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const showControlRef = useRef(showControl);
 
   const playing = playingProp ?? playingState;
   const muted = mutedProp ?? mutedState;
   const isDurationControlled = durationProp !== undefined;
-  const isCurrentTimeControlled = currentTimeProp !== undefined;
   const duration = durationProp ?? durationState;
-  const currentTime = currentTimeProp ?? currentTimeState;
+  const currentTime = currentTimeState;
   const fullscreenAllowed = active ?? true;
   const onTimeChangeRef = useRef(onTimeChange);
   const onDurationChangeRef = useRef(onDurationChange);
   onTimeChangeRef.current = onTimeChange;
   onDurationChangeRef.current = onDurationChange;
+  showControlRef.current = showControl;
+
+  const { currentTime: _ignoredCurrentTime, ...domVideoProps } = videoProps as typeof videoProps & {
+    currentTime?: unknown;
+  };
 
   const setTimeD = useRef(
     createThrottledNumberFn((value: number) => {
@@ -336,6 +339,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       v.currentTime = value;
     }, 30)
   );
+  const setCurrentTimeUi = useRef(createThrottledNumberFn((value: number) => setCurrentTimeState(value), 250));
 
   const clearTimers = useCallback(() => {
     if (reloadTimer.current) {
@@ -420,9 +424,9 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-    if (!isCurrentTimeControlled) setCurrentTimeState(nextTime);
+    setCurrentTimeUi.current(nextTime);
     onTimeChangeRef.current?.(nextTime, el);
-  }, [isCurrentTimeControlled]);
+  }, []);
 
   const onDur = useCallback(() => {
     const el = videoRef.current;
@@ -519,10 +523,11 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
       const next = clampTime(value, duration);
       setTimeD.current(next);
-      if (currentTimeProp === undefined) setCurrentTimeState(next);
+      setCurrentTimeUi.current.cancel();
+      setCurrentTimeState(next);
       notifyActiveChange(el, 'seek');
     },
-    [currentTimeProp, duration, notifyActiveChange]
+    [duration, notifyActiveChange]
   );
 
   const seekPrevAction = useCallback(
@@ -799,10 +804,10 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     notifyActiveChange(null, 'destroy');
     setNextPlaying(false);
     if (durationProp === undefined) setDurationState(0);
-    if (currentTimeProp === undefined) setCurrentTimeState(0);
+    setCurrentTimeUi.current.cancel();
+    setCurrentTimeState(0);
   }, [
     clearTimers,
-    currentTimeProp,
     durationProp,
     notifyActiveChange,
     onDur,
@@ -884,8 +889,12 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   const mouseMoveHandler = useCallback(() => {
     if (controlTime.current) clearTimeout(controlTime.current);
-    setControlVisible(true);
+    if (!showControlRef.current) {
+      showControlRef.current = true;
+      setControlVisible(true);
+    }
     controlTime.current = setTimeout(() => {
+      showControlRef.current = false;
       setControlVisible(false);
     }, 1000 * 10);
   }, []);
@@ -914,13 +923,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     if (playingProp) void playAction();
     else pauseAction();
   }, [pauseAction, playAction, playingProp]);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el || currentTimeProp === undefined) return;
-    if (Math.abs(el.currentTime - currentTimeProp) < 0.25) return;
-    el.currentTime = clampTime(currentTimeProp, duration);
-  }, [currentTimeProp, duration]);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -1011,6 +1013,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   useEffect(() => {
     return () => {
       setTimeD.current.cancel();
+      setCurrentTimeUi.current.cancel();
       destroy();
     };
   }, [destroy]);
@@ -1063,7 +1066,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
       <div className="video-wrapper">
         <video
-          {...videoProps}
+          {...domVideoProps}
           controls={false}
           ref={setVideoEl}
           crossOrigin={crossOrigin}

@@ -62,54 +62,54 @@ const TimeBlock = ({ duration, currentTime }: { duration: number; currentTime: n
 
 type IconName = 'back' | 'forward' | 'fullscreen' | 'mute' | 'pause' | 'play' | 'sound';
 
-const Icon = ({ name }: { name: IconName }) => {
-  const paths: Record<IconName, ReactNode> = {
-    back: (
-      <>
-        <path d="M11 7l-6 5 6 5V7z" />
-        <path d="M19 7l-6 5 6 5V7z" />
-      </>
-    ),
-    forward: (
-      <>
-        <path d="M5 7l6 5-6 5V7z" />
-        <path d="M13 7l6 5-6 5V7z" />
-      </>
-    ),
-    fullscreen: (
-      <>
-        <path d="M5 10V5h5" />
-        <path d="M14 5h5v5" />
-        <path d="M19 14v5h-5" />
-        <path d="M10 19H5v-5" />
-      </>
-    ),
-    mute: (
-      <>
-        <path d="M4 10v4h4l5 4V6l-5 4H4z" />
-        <path d="M17 9l4 6" />
-        <path d="M21 9l-4 6" />
-      </>
-    ),
-    pause: (
-      <>
-        <path d="M8 6h3v12H8z" />
-        <path d="M13 6h3v12h-3z" />
-      </>
-    ),
-    play: <path d="M8 5v14l11-7L8 5z" />,
-    sound: (
-      <>
-        <path d="M4 10v4h4l5 4V6l-5 4H4z" />
-        <path d="M16 9a4 4 0 010 6" />
-        <path d="M18.5 6.5a8 8 0 010 11" />
-      </>
-    ),
-  };
+const ICON_PATHS: Record<IconName, ReactNode> = {
+  back: (
+    <>
+      <path d="M11 7l-6 5 6 5V7z" />
+      <path d="M19 7l-6 5 6 5V7z" />
+    </>
+  ),
+  forward: (
+    <>
+      <path d="M5 7l6 5-6 5V7z" />
+      <path d="M13 7l6 5-6 5V7z" />
+    </>
+  ),
+  fullscreen: (
+    <>
+      <path d="M5 10V5h5" />
+      <path d="M14 5h5v5" />
+      <path d="M19 14v5h-5" />
+      <path d="M10 19H5v-5" />
+    </>
+  ),
+  mute: (
+    <>
+      <path d="M4 10v4h4l5 4V6l-5 4H4z" />
+      <path d="M17 9l4 6" />
+      <path d="M21 9l-4 6" />
+    </>
+  ),
+  pause: (
+    <>
+      <path d="M8 6h3v12H8z" />
+      <path d="M13 6h3v12h-3z" />
+    </>
+  ),
+  play: <path d="M8 5v14l11-7L8 5z" />,
+  sound: (
+    <>
+      <path d="M4 10v4h4l5 4V6l-5 4H4z" />
+      <path d="M16 9a4 4 0 010 6" />
+      <path d="M18.5 6.5a8 8 0 010 11" />
+    </>
+  ),
+};
 
+const Icon = ({ name }: { name: IconName }) => {
   return (
     <svg aria-hidden="true" className="video-player-icon" focusable="false" viewBox="0 0 24 24">
-      {paths[name]}
+      {ICON_PATHS[name]}
     </svg>
   );
 };
