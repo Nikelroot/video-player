@@ -37,7 +37,30 @@ export function Example() {
 }
 ```
 
-When `active` is `true`, pressing `F` toggles fullscreen. When `active` is `false`, the player releases native playback loading so inactive MP4 players do not keep playback requests open; with `preload="metadata"`, inactive native videos still load metadata.
+When `active` is `true`, pressing `F` toggles fullscreen.
+
+## Multiple MP4 players
+
+Use `active` when rendering several video players on the same page and only one of them should be ready for playback.
+
+```tsx
+<VideoPlayer
+  videoSrc="https://cdn.example.com/video-a.mp4"
+  sourceType="native"
+  active={isSelected}
+  preload="metadata"
+/>
+```
+
+This solves a switching problem where previous MP4 players can keep large browser media requests open after another player starts. In Chrome DevTools this often appears as new video requests staying in a long `Pending` state, even when CDN, disk, and network throughput are healthy.
+
+For native MP4 sources:
+
+- `active={true}` allows playback and fullscreen.
+- `active={false}` releases playback loading so inactive players do not keep competing media requests open.
+- `preload="metadata"` still loads metadata for inactive native videos, so duration and basic media information can be available without starting playback loading.
+
+By default `exclusivePlayback` is enabled. When a player starts playback, the previous active native MP4 player is paused and its media source is released, freeing the browser media request before the next video loads.
 
 For public CDN-hosted videos, prefer non-credentialed requests unless the CDN is explicitly configured for cookies:
 
@@ -56,4 +79,3 @@ Build before publishing:
 ```bash
 npm run build
 ```
-# video-player
