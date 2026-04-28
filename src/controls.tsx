@@ -110,16 +110,25 @@ const Icon = ({ name }: { name: IconName }) => {
 };
 
 const ControlButton = ({
+  disabled,
   icon,
   label,
   onClick,
 }: {
+  disabled?: boolean;
   icon: IconName;
   label: string;
   onClick: () => void | Promise<void>;
 }) => {
   return (
-    <button aria-label={label} className="video-player-control-button" onClick={() => void onClick()} title={label} type="button">
+    <button
+      aria-label={label}
+      className="video-player-control-button"
+      disabled={disabled}
+      onClick={() => void onClick()}
+      title={label}
+      type="button"
+    >
       <Icon name={icon} />
     </button>
   );
@@ -128,6 +137,7 @@ const ControlButton = ({
 export interface VideoPlayerControlsProps {
   variant: ControlsVariant;
   fullScreenAction: () => void;
+  fullscreenAllowed: boolean;
   showControl: boolean;
   playAction: () => void | Promise<void>;
   pauseAction: () => void;
@@ -151,6 +161,7 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
   const {
     variant,
     fullScreenAction,
+    fullscreenAllowed,
     showControl,
     playAction,
     pauseAction,
@@ -185,7 +196,7 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
         <div className="video-player-control-row">
           <div className="full" />
           <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
-          <ControlButton icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
+          <ControlButton disabled={!fullscreenAllowed} icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
         </div>
       </VideoPlayerControlStyles>
     );
@@ -208,7 +219,7 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
         <SeekSlider playAction={playAction} duration={duration} currentTime={currentTime} seekSetTime={seekSetTime} />
         <TimeBlock duration={duration} currentTime={currentTime} />
         <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
-        <ControlButton icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
+        <ControlButton disabled={!fullscreenAllowed} icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
       </div>
     </VideoPlayerControlStyles>
   );

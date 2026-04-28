@@ -37,6 +37,7 @@ interface VideoPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoEleme
     sourceType?: 'auto' | 'hls' | 'native';
     type?: string;
     controlsVariant: ControlsVariant;
+    active?: boolean;
     autoPlay?: boolean;
     preload?: '' | 'none' | 'auto' | 'metadata';
     loop?: boolean;

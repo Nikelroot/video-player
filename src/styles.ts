@@ -52,6 +52,15 @@ export const VideoPlayerControlStyles = styled.div<{
     outline: none;
   }
 
+  .video-player-control-button:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  .video-player-control-button:disabled:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
   .video-player-icon {
     width: 17px;
     height: 17px;

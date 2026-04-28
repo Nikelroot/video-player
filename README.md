@@ -28,6 +28,7 @@ export function Example() {
       videoRef={videoRef}
       videoSrc="https://example.com/stream.m3u8"
       controlsVariant="full"
+      active={true}
       live={false}
       autoPlay={false}
       onTimeChange={(time) => console.log(time)}

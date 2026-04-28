@@ -58,6 +58,15 @@ var VideoPlayerControlStyles = styled.div`
     outline: none;
   }
 
+  .video-player-control-button:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  .video-player-control-button:disabled:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
   .video-player-icon {
     width: 17px;
     height: 17px;
@@ -453,11 +462,23 @@ var Icon = ({ name }) => {
   return /* @__PURE__ */ jsx("svg", { "aria-hidden": "true", className: "video-player-icon", focusable: "false", viewBox: "0 0 24 24", children: paths[name] });
 };
 var ControlButton = ({
+  disabled,
   icon,
   label,
   onClick
 }) => {
-  return /* @__PURE__ */ jsx("button", { "aria-label": label, className: "video-player-control-button", onClick: () => void onClick(), title: label, type: "button", children: /* @__PURE__ */ jsx(Icon, { name: icon }) });
+  return /* @__PURE__ */ jsx(
+    "button",
+    {
+      "aria-label": label,
+      className: "video-player-control-button",
+      disabled,
+      onClick: () => void onClick(),
+      title: label,
+      type: "button",
+      children: /* @__PURE__ */ jsx(Icon, { name: icon })
+    }
+  );
 };
 var stopControlClick = (e) => {
   e.preventDefault();
@@ -467,6 +488,7 @@ var VideoPlayerControls = (props) => {
   const {
     variant,
     fullScreenAction,
+    fullscreenAllowed,
     showControl,
     playAction,
     pauseAction,
@@ -492,7 +514,7 @@ var VideoPlayerControls = (props) => {
     return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
       /* @__PURE__ */ jsx("div", { className: "full" }),
       /* @__PURE__ */ jsx(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
-      /* @__PURE__ */ jsx(ControlButton, { icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
+      /* @__PURE__ */ jsx(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
     ] }) });
   }
   return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
@@ -504,7 +526,7 @@ var VideoPlayerControls = (props) => {
     /* @__PURE__ */ jsx(SeekSlider, { playAction, duration, currentTime, seekSetTime }),
     /* @__PURE__ */ jsx(TimeBlock, { duration, currentTime }),
     /* @__PURE__ */ jsx(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
-    /* @__PURE__ */ jsx(ControlButton, { icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
+    /* @__PURE__ */ jsx(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
   ] }) });
 };
 
@@ -722,6 +744,7 @@ var assignRef = (ref, value) => {
 var VideoPlayerBase = (props, ref) => {
   const {
     controlsVariant = "none",
+    active,
     autoPlay = false,
     preload = "metadata",
     loop = false,
@@ -795,6 +818,7 @@ var VideoPlayerBase = (props, ref) => {
   const muted = mutedProp != null ? mutedProp : mutedState;
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeProp != null ? currentTimeProp : currentTimeState;
+  const fullscreenAllowed = active != null ? active : true;
   const setTimeD = useRef(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
@@ -1216,6 +1240,7 @@ var VideoPlayerBase = (props, ref) => {
       else if (doc.msExitFullscreen) void doc.msExitFullscreen();
       return;
     }
+    if (!fullscreenAllowed) return;
     if (containerEl) {
       if (containerEl.requestFullscreen) void containerEl.requestFullscreen();
       else if (containerEl.webkitRequestFullscreen) void containerEl.webkitRequestFullscreen();
@@ -1227,7 +1252,7 @@ var VideoPlayerBase = (props, ref) => {
       if (videoEl.requestFullscreen) void videoEl.requestFullscreen();
       else if (videoEl.webkitEnterFullscreen) void videoEl.webkitEnterFullscreen();
     }
-  }, []);
+  }, [fullscreenAllowed]);
   const videoDbClickHandler = useCallback(() => {
     if (!handleClick) return;
     fullScreenAction();
@@ -1410,6 +1435,7 @@ var VideoPlayerBase = (props, ref) => {
           {
             variant: controlsVariant,
             fullScreenAction,
+            fullscreenAllowed,
             showControl,
             playAction,
             pauseAction,

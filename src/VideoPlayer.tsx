@@ -89,6 +89,7 @@ export interface VideoPlayerProps
   sourceType?: 'auto' | 'hls' | 'native';
   type?: string;
   controlsVariant: ControlsVariant;
+  active?: boolean;
   autoPlay?: boolean;
   preload?: '' | 'none' | 'auto' | 'metadata';
   loop?: boolean;
@@ -233,6 +234,7 @@ const assignRef = <T,>(ref: React.Ref<T> | undefined, value: T | null) => {
 const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoPlayerHandle>) => {
   const {
     controlsVariant = 'none',
+    active,
     autoPlay = false,
     preload = 'metadata',
     loop = false,
@@ -312,6 +314,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const muted = mutedProp ?? mutedState;
   const duration = durationProp ?? durationState;
   const currentTime = currentTimeProp ?? currentTimeState;
+  const fullscreenAllowed = active ?? true;
 
   const setTimeD = useRef(
     createThrottledNumberFn((value: number) => {
@@ -797,6 +800,8 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       return;
     }
 
+    if (!fullscreenAllowed) return;
+
     if (containerEl) {
       if (containerEl.requestFullscreen) void containerEl.requestFullscreen();
       else if (containerEl.webkitRequestFullscreen) void containerEl.webkitRequestFullscreen();
@@ -809,7 +814,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       if (videoEl.requestFullscreen) void videoEl.requestFullscreen();
       else if (videoEl.webkitEnterFullscreen) void videoEl.webkitEnterFullscreen();
     }
-  }, []);
+  }, [fullscreenAllowed]);
 
   const videoDbClickHandler = useCallback(() => {
     if (!handleClick) return;
@@ -1038,6 +1043,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       <VideoPlayerControls
         variant={controlsVariant}
         fullScreenAction={fullScreenAction}
+        fullscreenAllowed={fullscreenAllowed}
         showControl={showControl}
         playAction={playAction}
         pauseAction={pauseAction}
