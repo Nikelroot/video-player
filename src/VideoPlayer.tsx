@@ -306,6 +306,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const liveStabilityMode = useRef(false);
   const liveStallEvents = useRef<number[]>([]);
   const controlTime = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sourceLoadId = useRef(0);
 
   const [playingState, setPlayingState] = useState(!!defaultPlaying);
   const [mutedState, setMutedState] = useState(!!defaultMuted);
@@ -350,6 +351,22 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       controlTime.current = null;
     }
   }, []);
+
+  const resetMediaForSourceChange = useCallback(() => {
+    clearTimers();
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  }, [clearTimers]);
 
   const setNextPlaying = useCallback(
     (value: boolean) => {
@@ -573,7 +590,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   }, [hlsConfig, hlsCredentials, live, liveHlsConfig, vodHlsConfig]);
 
   const loadVideo = useCallback(
-    async (startAt: number = initialTime) => {
+    async (startAt: number = initialTime, loadId: number = sourceLoadId.current) => {
       const startVideoRef = videoRef.current;
       if (!startVideoRef) return;
       let HlsCtor: typeof Hls;
@@ -583,14 +600,18 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
         reportError(error, { type: 'hls-loader', src: videoSrc }, messages.streamLoadFailed);
         return;
       }
+      if (loadId !== sourceLoadId.current) return;
       if (!videoRef.current || videoRef.current !== startVideoRef) return;
       const video = videoRef.current;
       if (!video) return;
 
       const h = new HlsCtor(resolvedHlsConfig());
       hlsRef.current = h;
+      const isStaleLoad = () => loadId !== sourceLoadId.current || hlsRef.current !== h || videoRef.current !== video;
 
       h.on(HlsCtor.Events.ERROR, (_evt, data) => {
+        if (isStaleLoad()) return;
+
         const { type: errorType, details, fatal } = data;
 
         if (details === HlsCtor.ErrorDetails.BUFFER_APPEND_ERROR || details === 'bufferAppendingError') return;
@@ -613,7 +634,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
                     hlsRef.current.destroy();
                     hlsRef.current = null;
                   }
-                  void loadVideo(resumeTime);
+                  void loadVideo(resumeTime, loadId);
                 }, 250);
               }
               return;
@@ -635,7 +656,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
                 hlsRef.current.destroy();
                 hlsRef.current = null;
               }
-              void loadVideo(resumeTime);
+              void loadVideo(resumeTime, loadId);
             }, backoffMs);
             return;
           }
@@ -682,13 +703,15 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
           hlsRef.current.destroy();
           hlsRef.current = null;
         }
-        void loadVideo(resumeTime);
+        void loadVideo(resumeTime, loadId);
       });
 
       h.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
+        if (isStaleLoad()) return;
         h.loadSource(videoSrc);
       });
       h.on(HlsCtor.Events.MANIFEST_PARSED, () => {
+        if (isStaleLoad()) return;
         fatalReloadCount.current = 0;
         netRetryCount.current = 0;
         mediaRecoverCount.current = 0;
@@ -719,7 +742,8 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     ]
   );
 
-  const loadVideoNative = useCallback(() => {
+  const loadVideoNative = useCallback((loadId: number = sourceLoadId.current) => {
+    if (loadId !== sourceLoadId.current) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -728,7 +752,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     if (autoPlay) void playAction();
   }, [autoPlay, initialTime, playAction, videoSrc]);
 
-  const loadVideoHls = useCallback(async () => {
+  const loadVideoHls = useCallback(async (loadId: number = sourceLoadId.current) => {
     const video = videoRef.current;
     const canNativeHls = !!video?.canPlayType && video.canPlayType('application/vnd.apple.mpegurl') !== '';
     let HlsCtor: typeof Hls;
@@ -738,14 +762,15 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       reportError(error, { type: 'hls-loader', src: videoSrc }, messages.streamLoadFailed);
       return;
     }
+    if (loadId !== sourceLoadId.current) return;
     if (!videoRef.current || videoRef.current !== video) return;
 
     if (HlsCtor.isSupported()) {
-      void loadVideo(initialTime);
+      void loadVideo(initialTime, loadId);
       return;
     }
     if (canNativeHls) {
-      loadVideoNative();
+      loadVideoNative(loadId);
       return;
     }
     reportError(null, { type: 'hls', src: videoSrc, reason: 'HLS is not supported in this browser' }, messages.unsupported);
@@ -899,37 +924,33 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   useEffect(() => {
     if (!videoRef.current) return;
+    const loadId = sourceLoadId.current + 1;
+    sourceLoadId.current = loadId;
+
     clearErrorState();
     fatalReloadCount.current = 0;
     netRetryCount.current = 0;
     mediaRecoverCount.current = 0;
     liveStabilityMode.current = false;
     liveStallEvents.current = [];
+    resetMediaForSourceChange();
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    if (sourceType === 'native' || type === 'video') loadVideoNative();
-    else if (sourceType === 'hls') void loadVideo(initialTime);
-    else if (isLikelyHlsSource(videoSrc)) void loadVideoHls();
-    else loadVideoNative();
+    if (sourceType === 'native' || type === 'video') loadVideoNative(loadId);
+    else if (sourceType === 'hls') void loadVideo(initialTime, loadId);
+    else if (isLikelyHlsSource(videoSrc)) void loadVideoHls(loadId);
+    else loadVideoNative(loadId);
 
     return () => {
-      clearTimers();
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      sourceLoadId.current += 1;
+      resetMediaForSourceChange();
     };
   }, [
     clearErrorState,
-    clearTimers,
     loadVideo,
     loadVideoHls,
     loadVideoNative,
     initialTime,
+    resetMediaForSourceChange,
     reloadKey,
     reloadToken,
     sourceType,
