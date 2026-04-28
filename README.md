@@ -37,7 +37,19 @@ export function Example() {
 }
 ```
 
-When `active` is `true`, pressing `F` toggles fullscreen.
+When `active` is `true`, pressing `F` toggles fullscreen. When `active` is `false`, the player releases its media source and waits until it becomes active again. In lists with several players, pass `active={index === activeIndex}` so inactive videos do not keep HLS/media pipelines open.
+
+For public CDN-hosted videos, prefer non-credentialed requests unless the CDN is explicitly configured for cookies:
+
+```tsx
+<VideoPlayer
+  videoSrc="https://cdn.example.com/stream.m3u8"
+  hlsCredentials="same-origin"
+  crossOrigin="anonymous"
+/>
+```
+
+If you use `hlsCredentials="include"` or `crossOrigin="use-credentials"`, the CDN must allow credentialed CORS and should not forward `Cookie` into the cache key for public media.
 
 Build before publishing:
 

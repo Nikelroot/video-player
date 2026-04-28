@@ -322,6 +322,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const duration = durationProp ?? durationState;
   const currentTime = currentTimeState;
   const fullscreenAllowed = active ?? true;
+  const shouldLoadMedia = active !== false;
   const onTimeChangeRef = useRef(onTimeChange);
   const onDurationChangeRef = useRef(onDurationChange);
   onTimeChangeRef.current = onTimeChange;
@@ -937,6 +938,19 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     liveStallEvents.current = [];
     resetMediaForSourceChange();
 
+    if (!shouldLoadMedia) {
+      setTimeD.current.cancel();
+      setCurrentTimeUi.current.cancel();
+      setDurationState(0);
+      setCurrentTimeState(0);
+      setPlayingState(false);
+
+      return () => {
+        sourceLoadId.current += 1;
+        resetMediaForSourceChange();
+      };
+    }
+
     if (sourceType === 'native' || type === 'video') loadVideoNative(loadId);
     else if (sourceType === 'hls') void loadVideo(initialTime, loadId);
     else if (isLikelyHlsSource(videoSrc)) void loadVideoHls(loadId);
@@ -952,6 +966,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     loadVideoHls,
     loadVideoNative,
     initialTime,
+    shouldLoadMedia,
     resetMediaForSourceChange,
     reloadKey,
     reloadToken,
@@ -1072,7 +1087,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
           crossOrigin={crossOrigin}
           playsInline
           muted={muted}
-          preload={preload}
+          preload={shouldLoadMedia ? preload : 'none'}
           loop={loop}
           onPlay={() => setNextPlaying(true)}
           onPause={() => setNextPlaying(false)}

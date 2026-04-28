@@ -840,6 +840,7 @@ var VideoPlayerBase = (props, ref) => {
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
+  const shouldLoadMedia = active !== false;
   const onTimeChangeRef = useRef2(onTimeChange);
   const onDurationChangeRef = useRef2(onDurationChange);
   onTimeChangeRef.current = onTimeChange;
@@ -1369,6 +1370,17 @@ var VideoPlayerBase = (props, ref) => {
     liveStabilityMode.current = false;
     liveStallEvents.current = [];
     resetMediaForSourceChange();
+    if (!shouldLoadMedia) {
+      setTimeD.current.cancel();
+      setCurrentTimeUi.current.cancel();
+      setDurationState(0);
+      setCurrentTimeState(0);
+      setPlayingState(false);
+      return () => {
+        sourceLoadId.current += 1;
+        resetMediaForSourceChange();
+      };
+    }
     if (sourceType === "native" || type === "video") loadVideoNative(loadId);
     else if (sourceType === "hls") void loadVideo(initialTime, loadId);
     else if (isLikelyHlsSource(videoSrc)) void loadVideoHls(loadId);
@@ -1383,6 +1395,7 @@ var VideoPlayerBase = (props, ref) => {
     loadVideoHls,
     loadVideoNative,
     initialTime,
+    shouldLoadMedia,
     resetMediaForSourceChange,
     reloadKey,
     reloadToken,
@@ -1479,7 +1492,7 @@ var VideoPlayerBase = (props, ref) => {
               crossOrigin,
               playsInline: true,
               muted,
-              preload,
+              preload: shouldLoadMedia ? preload : "none",
               loop,
               onPlay: () => setNextPlaying(true),
               onPause: () => setNextPlaying(false),
