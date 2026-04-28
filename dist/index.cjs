@@ -706,10 +706,10 @@ var VideoPlayerBase = (props, ref) => {
     crossOrigin = "use-credentials",
     messages: messagesProp,
     accentColor,
+    videoSrc: rawVideoSrc = "",
     ...videoProps
   } = props;
-  let { videoSrc = "" } = props;
-  videoSrc = videoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
+  const videoSrc = rawVideoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
   const messages = (0, import_react2.useMemo)(() => ({ ...defaultMessages, ...messagesProp }), [messagesProp]);
   const [, isMobile, mobileType] = useWindowWidth();
   const videoRef = (0, import_react2.useRef)(null);
