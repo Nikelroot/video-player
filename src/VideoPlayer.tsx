@@ -231,6 +231,12 @@ const assignRef = <T,>(ref: React.Ref<T> | undefined, value: T | null) => {
   (ref as { current: T | null }).current = value;
 };
 
+const isEditableKeyTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+};
+
 const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoPlayerHandle>) => {
   const {
     controlsVariant = 'none',
@@ -930,6 +936,25 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     if (!canAttemptPlayback(videoRef.current)) return;
     void playAction();
   }, [autoPlay, playAction]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'KeyF') return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (active !== true) return;
+      if (isEditableKeyTarget(event.target)) return;
+
+      event.preventDefault();
+      fullScreenAction();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [active, fullScreenAction]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;

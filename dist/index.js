@@ -743,6 +743,10 @@ var assignRef = (ref, value) => {
   }
   ref.current = value;
 };
+var isEditableKeyTarget = (target) => {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+};
 var VideoPlayerBase = (props, ref) => {
   const {
     controlsVariant = "none",
@@ -1353,6 +1357,21 @@ var VideoPlayerBase = (props, ref) => {
     if (!canAttemptPlayback(videoRef.current)) return;
     void playAction();
   }, [autoPlay, playAction]);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const handleKeyDown = (event) => {
+      if (event.code !== "KeyF") return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (active !== true) return;
+      if (isEditableKeyTarget(event.target)) return;
+      event.preventDefault();
+      fullScreenAction();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [active, fullScreenAction]);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const doc = document;

@@ -37,6 +37,8 @@ export function Example() {
 }
 ```
 
+When `active` is `true`, pressing `F` toggles fullscreen.
+
 Build before publishing:
 
 ```bash
