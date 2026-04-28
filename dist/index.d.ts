@@ -61,6 +61,7 @@ interface VideoPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoEleme
     duration?: number;
     onTimeChange?: (time: number, video: HTMLVideoElement) => void;
     onDurationChange?: (duration: number, video: HTMLVideoElement) => void;
+    videoRef?: React.Ref<HTMLVideoElement>;
     onVideoRefChange?: (video: HTMLVideoElement | null) => void;
     onActiveChange?: (payload: VideoPlayerActiveChangePayload) => void;
     onPlaybackError?: (payload: VideoPlayerPlaybackError) => void;

@@ -17,11 +17,15 @@ npm install react react-dom styled-components
 ## Usage
 
 ```tsx
+import { useRef } from 'react';
 import VideoPlayer from '@nikelroot/video-player';
 
 export function Example() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   return (
     <VideoPlayer
+      videoRef={videoRef}
       videoSrc="https://example.com/stream.m3u8"
       controlsVariant="full"
       live={false}

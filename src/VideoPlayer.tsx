@@ -113,6 +113,7 @@ export interface VideoPlayerProps
   duration?: number;
   onTimeChange?: (time: number, video: HTMLVideoElement) => void;
   onDurationChange?: (duration: number, video: HTMLVideoElement) => void;
+  videoRef?: React.Ref<HTMLVideoElement>;
   onVideoRefChange?: (video: HTMLVideoElement | null) => void;
   onActiveChange?: (payload: VideoPlayerActiveChangePayload) => void;
   onPlaybackError?: (payload: VideoPlayerPlaybackError) => void;
@@ -218,6 +219,17 @@ const isLikelyHlsSource = (src: string) => {
   }
 };
 
+const assignRef = <T,>(ref: React.Ref<T> | undefined, value: T | null) => {
+  if (!ref) return;
+
+  if (typeof ref === 'function') {
+    ref(value);
+    return;
+  }
+
+  (ref as { current: T | null }).current = value;
+};
+
 const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoPlayerHandle>) => {
   const {
     controlsVariant = 'none',
@@ -238,6 +250,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     alwaysShowSegments = false,
     initialTime = 0,
     reloadKey,
+    videoRef: externalVideoRef,
     onVideoRefChange,
     handleClick = true,
     onPointerDown,
@@ -398,6 +411,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       }
 
       videoRef.current = el;
+      assignRef(externalVideoRef, el);
       onVideoRefChange?.(el);
       notifyActiveChange(el, 'ref');
 
@@ -406,7 +420,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       el.addEventListener('timeupdate', onTime);
       el.addEventListener('durationchange', onDur);
     },
-    [muted, notifyActiveChange, onDur, onTime, onVideoRefChange]
+    [externalVideoRef, muted, notifyActiveChange, onDur, onTime, onVideoRefChange]
   );
 
   const pauseOtherVideos = useCallback(

@@ -711,6 +711,14 @@ var isLikelyHlsSource = (src) => {
     return /\.m3u8($|[?#])/i.test(src);
   }
 };
+var assignRef = (ref, value) => {
+  if (!ref) return;
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  ref.current = value;
+};
 var VideoPlayerBase = (props, ref) => {
   const {
     controlsVariant = "none",
@@ -731,6 +739,7 @@ var VideoPlayerBase = (props, ref) => {
     alwaysShowSegments = false,
     initialTime = 0,
     reloadKey,
+    videoRef: externalVideoRef,
     onVideoRefChange,
     handleClick = true,
     onPointerDown,
@@ -872,6 +881,7 @@ var VideoPlayerBase = (props, ref) => {
         prev.removeEventListener("durationchange", onDur);
       }
       videoRef.current = el;
+      assignRef(externalVideoRef, el);
       onVideoRefChange == null ? void 0 : onVideoRefChange(el);
       notifyActiveChange(el, "ref");
       if (!el) return;
@@ -879,7 +889,7 @@ var VideoPlayerBase = (props, ref) => {
       el.addEventListener("timeupdate", onTime);
       el.addEventListener("durationchange", onDur);
     },
-    [muted, notifyActiveChange, onDur, onTime, onVideoRefChange]
+    [externalVideoRef, muted, notifyActiveChange, onDur, onTime, onVideoRefChange]
   );
   const pauseOtherVideos = useCallback(
     (el) => {
