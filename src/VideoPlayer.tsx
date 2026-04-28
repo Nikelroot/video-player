@@ -325,6 +325,8 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const fullscreenAllowed = active ?? true;
   const onTimeChangeRef = useRef(onTimeChange);
   const onDurationChangeRef = useRef(onDurationChange);
+  onTimeChangeRef.current = onTimeChange;
+  onDurationChangeRef.current = onDurationChange;
 
   const setTimeD = useRef(
     createThrottledNumberFn((value: number) => {
@@ -396,14 +398,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     },
     [onActiveChange]
   );
-
-  useEffect(() => {
-    onTimeChangeRef.current = onTimeChange;
-  }, [onTimeChange]);
-
-  useEffect(() => {
-    onDurationChangeRef.current = onDurationChange;
-  }, [onDurationChange]);
 
   const onTime = useCallback(() => {
     const el = videoRef.current;

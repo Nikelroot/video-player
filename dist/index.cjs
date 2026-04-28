@@ -871,6 +871,8 @@ var VideoPlayerBase = (props, ref) => {
   const fullscreenAllowed = active != null ? active : true;
   const onTimeChangeRef = (0, import_react3.useRef)(onTimeChange);
   const onDurationChangeRef = (0, import_react3.useRef)(onDurationChange);
+  onTimeChangeRef.current = onTimeChange;
+  onDurationChangeRef.current = onDurationChange;
   const setTimeD = (0, import_react3.useRef)(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
@@ -934,12 +936,6 @@ var VideoPlayerBase = (props, ref) => {
     },
     [onActiveChange]
   );
-  (0, import_react3.useEffect)(() => {
-    onTimeChangeRef.current = onTimeChange;
-  }, [onTimeChange]);
-  (0, import_react3.useEffect)(() => {
-    onDurationChangeRef.current = onDurationChange;
-  }, [onDurationChange]);
   const onTime = (0, import_react3.useCallback)(() => {
     var _a;
     const el = videoRef.current;

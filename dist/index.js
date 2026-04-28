@@ -842,6 +842,8 @@ var VideoPlayerBase = (props, ref) => {
   const fullscreenAllowed = active != null ? active : true;
   const onTimeChangeRef = useRef2(onTimeChange);
   const onDurationChangeRef = useRef2(onDurationChange);
+  onTimeChangeRef.current = onTimeChange;
+  onDurationChangeRef.current = onDurationChange;
   const setTimeD = useRef2(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
@@ -905,12 +907,6 @@ var VideoPlayerBase = (props, ref) => {
     },
     [onActiveChange]
   );
-  useEffect(() => {
-    onTimeChangeRef.current = onTimeChange;
-  }, [onTimeChange]);
-  useEffect(() => {
-    onDurationChangeRef.current = onDurationChange;
-  }, [onDurationChange]);
   const onTime = useCallback(() => {
     var _a;
     const el = videoRef.current;
