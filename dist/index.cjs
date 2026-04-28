@@ -548,6 +548,19 @@ var VideoPlayerControls = (props) => {
   } = props;
   const [, isMobile] = useWindowWidth();
   if (variant === "none") return null;
+  if (variant === "tiny") {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSlider, { playAction, duration, currentTime, seekSetTime })
+    ] }) });
+  }
+  if (variant === "fullscreen-only") {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
+    ] }) });
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
     playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "pause", label: "Pause", onClick: pauseAction }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "play", label: "Play", onClick: playAction }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "back", label: "Back 15 seconds", onClick: () => seekPrevAction() }),
@@ -1430,7 +1443,7 @@ var VideoPlayerBase = (props, ref) => {
     {
       ref: containerRef,
       onMouseMove: mouseMoveHandler,
-      className: "VideoPlayer",
+      className: isFullscreen ? "VideoPlayer VideoPlayer--fullscreen" : "VideoPlayer",
       type,
       $isMobile: isMobile,
       $mobileType: mobileType,

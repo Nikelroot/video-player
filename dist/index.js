@@ -519,6 +519,19 @@ var VideoPlayerControls = (props) => {
   } = props;
   const [, isMobile] = useWindowWidth();
   if (variant === "none") return null;
+  if (variant === "tiny") {
+    return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
+      /* @__PURE__ */ jsx("div", { className: "full" }),
+      /* @__PURE__ */ jsx(SeekSlider, { playAction, duration, currentTime, seekSetTime })
+    ] }) });
+  }
+  if (variant === "fullscreen-only") {
+    return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
+      /* @__PURE__ */ jsx("div", { className: "full" }),
+      /* @__PURE__ */ jsx(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
+      /* @__PURE__ */ jsx(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
+    ] }) });
+  }
   return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
     playing ? /* @__PURE__ */ jsx(ControlButton, { icon: "pause", label: "Pause", onClick: pauseAction }) : /* @__PURE__ */ jsx(ControlButton, { icon: "play", label: "Play", onClick: playAction }),
     /* @__PURE__ */ jsx(ControlButton, { icon: "back", label: "Back 15 seconds", onClick: () => seekPrevAction() }),
@@ -1401,7 +1414,7 @@ var VideoPlayerBase = (props, ref) => {
     {
       ref: containerRef,
       onMouseMove: mouseMoveHandler,
-      className: "VideoPlayer",
+      className: isFullscreen ? "VideoPlayer VideoPlayer--fullscreen" : "VideoPlayer",
       type,
       $isMobile: isMobile,
       $mobileType: mobileType,

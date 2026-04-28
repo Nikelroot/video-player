@@ -184,6 +184,29 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
 
   if (variant === 'none') return null;
 
+  if (variant === 'tiny') {
+    return (
+      <VideoPlayerControlStyles $tiny $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
+        <div className="video-player-control-row">
+          <div className="full" />
+          <SeekSlider playAction={playAction} duration={duration} currentTime={currentTime} seekSetTime={seekSetTime} />
+        </div>
+      </VideoPlayerControlStyles>
+    );
+  }
+
+  if (variant === 'fullscreen-only') {
+    return (
+      <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
+        <div className="video-player-control-row">
+          <div className="full" />
+          <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
+          <ControlButton disabled={!fullscreenAllowed} icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
+        </div>
+      </VideoPlayerControlStyles>
+    );
+  }
+
   return (
     <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
       <div className="video-player-control-row">

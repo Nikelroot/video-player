@@ -992,7 +992,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     <VideoPlayerStyles
       ref={containerRef}
       onMouseMove={mouseMoveHandler}
-      className="VideoPlayer"
+      className={isFullscreen ? 'VideoPlayer VideoPlayer--fullscreen' : 'VideoPlayer'}
       type={type}
       $isMobile={isMobile}
       $mobileType={mobileType}
