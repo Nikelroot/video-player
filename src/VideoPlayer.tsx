@@ -88,7 +88,7 @@ export interface VideoPlayerProps
   videoSrc: string;
   sourceType?: 'auto' | 'hls' | 'native';
   type?: string;
-  controlsVariant?: ControlsVariant;
+  controlsVariant: ControlsVariant;
   autoPlay?: boolean;
   preload?: '' | 'none' | 'auto' | 'metadata';
   loop?: boolean;
@@ -983,6 +983,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       <div className="video-wrapper">
         <video
           {...videoProps}
+          controls={false}
           ref={setVideoEl}
           crossOrigin={crossOrigin}
           playsInline

@@ -1400,6 +1400,7 @@ var VideoPlayerBase = (props, ref) => {
             "video",
             {
               ...videoProps,
+              controls: false,
               ref: setVideoEl,
               crossOrigin,
               playsInline: true,
