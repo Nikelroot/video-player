@@ -269,6 +269,13 @@ export const VideoPlayerStyles = styled.div<{
     }
   }
 
+  &:hover {
+    .video-right-bar {
+      background: rgba(0, 0, 0, 0.1);
+      opacity: 1;
+    }
+  }
+
   ${(props) =>
     (props.$showControl || props.$alwaysShowSegments) &&
     css`

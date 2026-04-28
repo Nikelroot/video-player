@@ -6,9 +6,12 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo as useMemo2,
-  useRef,
+  useRef as useRef2,
   useState
 } from "react";
+
+// src/controls.tsx
+import { useRef } from "react";
 
 // src/styles.ts
 import { css, styled } from "styled-components";
@@ -257,6 +260,13 @@ var VideoPlayerStyles = styled.div`
     }
   }
 
+  &:hover {
+    .video-right-bar {
+      background: rgba(0, 0, 0, 0.1);
+      opacity: 1;
+    }
+  }
+
   ${(props) => (props.$showControl || props.$alwaysShowSegments) && css`
       .video-right-bar {
         background: rgba(0, 0, 0, 0.1);
@@ -391,6 +401,7 @@ var createThrottledNumberFn = (fn, waitMs) => {
 // src/controls.tsx
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
+  const ref = useRef(null);
   const clickHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -399,10 +410,14 @@ var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
   const safeCurrentTime = Math.max(0, Math.min(Number.isFinite(currentTime) ? currentTime : 0, safeDuration || Infinity));
   const completeChange = () => {
     void playAction();
+    if (ref.current) {
+      ref.current.blur();
+    }
   };
   return /* @__PURE__ */ jsx(SeekSliderStyled, { onClick: clickHandler, className: "seek-slider", children: /* @__PURE__ */ jsx(
     "input",
     {
+      ref,
       "aria-label": "Seek",
       className: "seek-range",
       disabled: safeDuration <= 0,
@@ -504,19 +519,6 @@ var VideoPlayerControls = (props) => {
   } = props;
   const [, isMobile] = useWindowWidth();
   if (variant === "none") return null;
-  if (variant === "tiny") {
-    return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
-      /* @__PURE__ */ jsx("div", { className: "full" }),
-      /* @__PURE__ */ jsx(SeekSlider, { playAction, duration, currentTime, seekSetTime })
-    ] }) });
-  }
-  if (variant === "fullscreen-only") {
-    return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
-      /* @__PURE__ */ jsx("div", { className: "full" }),
-      /* @__PURE__ */ jsx(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
-      /* @__PURE__ */ jsx(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
-    ] }) });
-  }
   return /* @__PURE__ */ jsx(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ jsxs("div", { className: "video-player-control-row", children: [
     playing ? /* @__PURE__ */ jsx(ControlButton, { icon: "pause", label: "Pause", onClick: pauseAction }) : /* @__PURE__ */ jsx(ControlButton, { icon: "play", label: "Play", onClick: playAction }),
     /* @__PURE__ */ jsx(ControlButton, { icon: "back", label: "Back 15 seconds", onClick: () => seekPrevAction() }),
@@ -795,17 +797,17 @@ var VideoPlayerBase = (props, ref) => {
   const videoSrc = rawVideoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
   const messages = useMemo2(() => ({ ...defaultMessages, ...messagesProp }), [messagesProp]);
   const [, isMobile, mobileType] = useWindowWidth();
-  const videoRef = useRef(null);
-  const hlsRef = useRef(null);
-  const containerRef = useRef(null);
-  const netRetryCount = useRef(0);
-  const mediaRecoverCount = useRef(0);
-  const fatalReloadCount = useRef(0);
-  const reloadTimer = useRef(null);
-  const stalledNudgeTimer = useRef(null);
-  const liveStabilityMode = useRef(false);
-  const liveStallEvents = useRef([]);
-  const controlTime = useRef(null);
+  const videoRef = useRef2(null);
+  const hlsRef = useRef2(null);
+  const containerRef = useRef2(null);
+  const netRetryCount = useRef2(0);
+  const mediaRecoverCount = useRef2(0);
+  const fatalReloadCount = useRef2(0);
+  const reloadTimer = useRef2(null);
+  const stalledNudgeTimer = useRef2(null);
+  const liveStabilityMode = useRef2(false);
+  const liveStallEvents = useRef2([]);
+  const controlTime = useRef2(null);
   const [playingState, setPlayingState] = useState(!!defaultPlaying);
   const [mutedState, setMutedState] = useState(!!defaultMuted);
   const [durationState, setDurationState] = useState(0);
@@ -819,7 +821,7 @@ var VideoPlayerBase = (props, ref) => {
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeProp != null ? currentTimeProp : currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
-  const setTimeD = useRef(
+  const setTimeD = useRef2(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
       if (!v) return;

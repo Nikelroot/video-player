@@ -37,6 +37,9 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/VideoPlayer.tsx
+var import_react3 = require("react");
+
+// src/controls.tsx
 var import_react2 = require("react");
 
 // src/styles.ts
@@ -286,6 +289,13 @@ var VideoPlayerStyles = import_styled_components.styled.div`
     }
   }
 
+  &:hover {
+    .video-right-bar {
+      background: rgba(0, 0, 0, 0.1);
+      opacity: 1;
+    }
+  }
+
   ${(props) => (props.$showControl || props.$alwaysShowSegments) && import_styled_components.css`
       .video-right-bar {
         background: rgba(0, 0, 0, 0.1);
@@ -420,6 +430,7 @@ var createThrottledNumberFn = (fn, waitMs) => {
 // src/controls.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
+  const ref = (0, import_react2.useRef)(null);
   const clickHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -428,10 +439,14 @@ var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
   const safeCurrentTime = Math.max(0, Math.min(Number.isFinite(currentTime) ? currentTime : 0, safeDuration || Infinity));
   const completeChange = () => {
     void playAction();
+    if (ref.current) {
+      ref.current.blur();
+    }
   };
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSliderStyled, { onClick: clickHandler, className: "seek-slider", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
     "input",
     {
+      ref,
       "aria-label": "Seek",
       className: "seek-range",
       disabled: safeDuration <= 0,
@@ -533,19 +548,6 @@ var VideoPlayerControls = (props) => {
   } = props;
   const [, isMobile] = useWindowWidth();
   if (variant === "none") return null;
-  if (variant === "tiny") {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $tiny: true, $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SeekSlider, { playAction, duration, currentTime, seekSetTime })
-    ] }) });
-  }
-  if (variant === "fullscreen-only") {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "full" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: muted ? "mute" : "sound", label: muted ? "Unmute" : "Mute", onClick: () => onMutedChange(!muted) }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { disabled: !fullscreenAllowed, icon: "fullscreen", label: "Fullscreen", onClick: fullScreenAction })
-    ] }) });
-  }
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VideoPlayerControlStyles, { $isMobile: isMobile, onClick: stopControlClick, $showControl: showControl, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "video-player-control-row", children: [
     playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "pause", label: "Pause", onClick: pauseAction }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "play", label: "Play", onClick: playAction }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ControlButton, { icon: "back", label: "Back 15 seconds", onClick: () => seekPrevAction() }),
@@ -822,40 +824,40 @@ var VideoPlayerBase = (props, ref) => {
     ...videoProps
   } = props;
   const videoSrc = rawVideoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
-  const messages = (0, import_react2.useMemo)(() => ({ ...defaultMessages, ...messagesProp }), [messagesProp]);
+  const messages = (0, import_react3.useMemo)(() => ({ ...defaultMessages, ...messagesProp }), [messagesProp]);
   const [, isMobile, mobileType] = useWindowWidth();
-  const videoRef = (0, import_react2.useRef)(null);
-  const hlsRef = (0, import_react2.useRef)(null);
-  const containerRef = (0, import_react2.useRef)(null);
-  const netRetryCount = (0, import_react2.useRef)(0);
-  const mediaRecoverCount = (0, import_react2.useRef)(0);
-  const fatalReloadCount = (0, import_react2.useRef)(0);
-  const reloadTimer = (0, import_react2.useRef)(null);
-  const stalledNudgeTimer = (0, import_react2.useRef)(null);
-  const liveStabilityMode = (0, import_react2.useRef)(false);
-  const liveStallEvents = (0, import_react2.useRef)([]);
-  const controlTime = (0, import_react2.useRef)(null);
-  const [playingState, setPlayingState] = (0, import_react2.useState)(!!defaultPlaying);
-  const [mutedState, setMutedState] = (0, import_react2.useState)(!!defaultMuted);
-  const [durationState, setDurationState] = (0, import_react2.useState)(0);
-  const [currentTimeState, setCurrentTimeState] = (0, import_react2.useState)(0);
-  const [isFullscreen, setIsFullscreen] = (0, import_react2.useState)(false);
-  const [showControl, setControlVisible] = (0, import_react2.useState)(true);
-  const [errorState, setErrorState] = (0, import_react2.useState)(null);
-  const [reloadToken, setReloadToken] = (0, import_react2.useState)(0);
+  const videoRef = (0, import_react3.useRef)(null);
+  const hlsRef = (0, import_react3.useRef)(null);
+  const containerRef = (0, import_react3.useRef)(null);
+  const netRetryCount = (0, import_react3.useRef)(0);
+  const mediaRecoverCount = (0, import_react3.useRef)(0);
+  const fatalReloadCount = (0, import_react3.useRef)(0);
+  const reloadTimer = (0, import_react3.useRef)(null);
+  const stalledNudgeTimer = (0, import_react3.useRef)(null);
+  const liveStabilityMode = (0, import_react3.useRef)(false);
+  const liveStallEvents = (0, import_react3.useRef)([]);
+  const controlTime = (0, import_react3.useRef)(null);
+  const [playingState, setPlayingState] = (0, import_react3.useState)(!!defaultPlaying);
+  const [mutedState, setMutedState] = (0, import_react3.useState)(!!defaultMuted);
+  const [durationState, setDurationState] = (0, import_react3.useState)(0);
+  const [currentTimeState, setCurrentTimeState] = (0, import_react3.useState)(0);
+  const [isFullscreen, setIsFullscreen] = (0, import_react3.useState)(false);
+  const [showControl, setControlVisible] = (0, import_react3.useState)(true);
+  const [errorState, setErrorState] = (0, import_react3.useState)(null);
+  const [reloadToken, setReloadToken] = (0, import_react3.useState)(0);
   const playing = playingProp != null ? playingProp : playingState;
   const muted = mutedProp != null ? mutedProp : mutedState;
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeProp != null ? currentTimeProp : currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
-  const setTimeD = (0, import_react2.useRef)(
+  const setTimeD = (0, import_react3.useRef)(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
       if (!v) return;
       v.currentTime = value;
     }, 30)
   );
-  const clearTimers = (0, import_react2.useCallback)(() => {
+  const clearTimers = (0, import_react3.useCallback)(() => {
     if (reloadTimer.current) {
       clearTimeout(reloadTimer.current);
       reloadTimer.current = null;
@@ -869,14 +871,14 @@ var VideoPlayerBase = (props, ref) => {
       controlTime.current = null;
     }
   }, []);
-  const setNextPlaying = (0, import_react2.useCallback)(
+  const setNextPlaying = (0, import_react3.useCallback)(
     (value) => {
       if (playingProp === void 0) setPlayingState(value);
       onPlayingChange == null ? void 0 : onPlayingChange(value);
     },
     [onPlayingChange, playingProp]
   );
-  const setNextMuted = (0, import_react2.useCallback)(
+  const setNextMuted = (0, import_react3.useCallback)(
     (value) => {
       if (mutedProp === void 0) setMutedState(value);
       const el = videoRef.current;
@@ -885,10 +887,10 @@ var VideoPlayerBase = (props, ref) => {
     },
     [mutedProp, onMutedChange]
   );
-  const clearErrorState = (0, import_react2.useCallback)(() => {
+  const clearErrorState = (0, import_react3.useCallback)(() => {
     setErrorState((prev) => prev ? null : prev);
   }, []);
-  const reportError = (0, import_react2.useCallback)(
+  const reportError = (0, import_react3.useCallback)(
     (error, data, message = messages.defaultError) => {
       const details = formatPlaybackErrorDetails(error, data);
       const code = getPlaybackErrorCodeText(error);
@@ -905,27 +907,27 @@ var VideoPlayerBase = (props, ref) => {
     },
     [messages.defaultError, onPlaybackError, setNextPlaying]
   );
-  const notifyActiveChange = (0, import_react2.useCallback)(
+  const notifyActiveChange = (0, import_react3.useCallback)(
     (video, reason) => {
       onActiveChange == null ? void 0 : onActiveChange({ video, reason });
     },
     [onActiveChange]
   );
-  const onTime = (0, import_react2.useCallback)(() => {
+  const onTime = (0, import_react3.useCallback)(() => {
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
     if (currentTimeProp === void 0) setCurrentTimeState(nextTime);
     onTimeChange == null ? void 0 : onTimeChange(nextTime, el);
   }, [currentTimeProp, onTimeChange]);
-  const onDur = (0, import_react2.useCallback)(() => {
+  const onDur = (0, import_react3.useCallback)(() => {
     const el = videoRef.current;
     if (!el) return;
     const nextDuration = Number.isFinite(el.duration) ? el.duration : 0;
     if (durationProp === void 0) setDurationState(nextDuration);
     onDurationChange == null ? void 0 : onDurationChange(nextDuration, el);
   }, [durationProp, onDurationChange]);
-  const setVideoEl = (0, import_react2.useCallback)(
+  const setVideoEl = (0, import_react3.useCallback)(
     (el) => {
       const prev = videoRef.current;
       if (prev === el) return;
@@ -944,7 +946,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [externalVideoRef, muted, notifyActiveChange, onDur, onTime, onVideoRefChange]
   );
-  const pauseOtherVideos = (0, import_react2.useCallback)(
+  const pauseOtherVideos = (0, import_react3.useCallback)(
     (el) => {
       if (!exclusivePlayback) return;
       if (typeof exclusivePlayback === "object") {
@@ -958,7 +960,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [exclusivePlayback]
   );
-  const playAction = (0, import_react2.useCallback)(async () => {
+  const playAction = (0, import_react3.useCallback)(async () => {
     const el = videoRef.current;
     if (!el) return;
     pauseOtherVideos(el);
@@ -984,14 +986,14 @@ var VideoPlayerBase = (props, ref) => {
       }
     }
   }, [clearErrorState, messages.playFailed, notifyActiveChange, pauseOtherVideos, reportError, scrollTo, setNextPlaying]);
-  const pauseAction = (0, import_react2.useCallback)(() => {
+  const pauseAction = (0, import_react3.useCallback)(() => {
     const el = videoRef.current;
     if (!el) return;
     el.pause();
     setNextPlaying(false);
     notifyActiveChange(el, "pause");
   }, [notifyActiveChange, setNextPlaying]);
-  const seekSetTime = (0, import_react2.useCallback)(
+  const seekSetTime = (0, import_react3.useCallback)(
     (value) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1002,7 +1004,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [currentTimeProp, duration, notifyActiveChange]
   );
-  const seekPrevAction = (0, import_react2.useCallback)(
+  const seekPrevAction = (0, import_react3.useCallback)(
     (sec = 15) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1010,7 +1012,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [seekSetTime]
   );
-  const seekNextAction = (0, import_react2.useCallback)(
+  const seekNextAction = (0, import_react3.useCallback)(
     (sec = 15) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1018,7 +1020,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [seekSetTime]
   );
-  const toggleAction = (0, import_react2.useCallback)(
+  const toggleAction = (0, import_react3.useCallback)(
     (force) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1030,12 +1032,12 @@ var VideoPlayerBase = (props, ref) => {
     },
     [pauseAction, playAction]
   );
-  const nudgeOnStall = (0, import_react2.useCallback)(() => {
+  const nudgeOnStall = (0, import_react3.useCallback)(() => {
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = Math.max(0, v.currentTime + 0.05);
   }, []);
-  const shouldSwitchLiveToStability = (0, import_react2.useCallback)(() => {
+  const shouldSwitchLiveToStability = (0, import_react3.useCallback)(() => {
     if (!live || liveStabilityMode.current) return false;
     const now = Date.now();
     liveStallEvents.current = [...liveStallEvents.current.filter((ts) => now - ts <= LIVE_STALL_WINDOW_MS), now];
@@ -1044,7 +1046,7 @@ var VideoPlayerBase = (props, ref) => {
     liveStallEvents.current = [];
     return true;
   }, [live]);
-  const resolvedHlsConfig = (0, import_react2.useCallback)(() => {
+  const resolvedHlsConfig = (0, import_react3.useCallback)(() => {
     const modeConfig = live ? liveHlsConfig : vodHlsConfig;
     const base = live ? confLiveStability : confVod;
     return withCredentialsConfig(
@@ -1056,7 +1058,7 @@ var VideoPlayerBase = (props, ref) => {
       hlsCredentials
     );
   }, [hlsConfig, hlsCredentials, live, liveHlsConfig, vodHlsConfig]);
-  const loadVideo = (0, import_react2.useCallback)(
+  const loadVideo = (0, import_react3.useCallback)(
     async (startAt = initialTime) => {
       const startVideoRef = videoRef.current;
       if (!startVideoRef) return;
@@ -1193,14 +1195,14 @@ var VideoPlayerBase = (props, ref) => {
       videoSrc
     ]
   );
-  const loadVideoNative = (0, import_react2.useCallback)(() => {
+  const loadVideoNative = (0, import_react3.useCallback)(() => {
     const video = videoRef.current;
     if (!video) return;
     video.src = videoSrc;
     video.currentTime = initialTime;
     if (autoPlay) void playAction();
   }, [autoPlay, initialTime, playAction, videoSrc]);
-  const loadVideoHls = (0, import_react2.useCallback)(async () => {
+  const loadVideoHls = (0, import_react3.useCallback)(async () => {
     const video = videoRef.current;
     const canNativeHls = !!(video == null ? void 0 : video.canPlayType) && video.canPlayType("application/vnd.apple.mpegurl") !== "";
     let HlsCtor;
@@ -1221,7 +1223,7 @@ var VideoPlayerBase = (props, ref) => {
     }
     reportError(null, { type: "hls", src: videoSrc, reason: "HLS is not supported in this browser" }, messages.unsupported);
   }, [initialTime, loadVideo, loadVideoNative, messages.streamLoadFailed, messages.unsupported, reportError, videoSrc]);
-  const destroy = (0, import_react2.useCallback)(() => {
+  const destroy = (0, import_react3.useCallback)(() => {
     clearTimers();
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -1252,12 +1254,12 @@ var VideoPlayerBase = (props, ref) => {
     onVideoRefChange,
     setNextPlaying
   ]);
-  const videoClickHandler = (0, import_react2.useCallback)(() => {
+  const videoClickHandler = (0, import_react3.useCallback)(() => {
     if (!handleClick) return;
     if (playOnClick) toggleAction();
     onVideoClick == null ? void 0 : onVideoClick();
   }, [handleClick, onVideoClick, playOnClick, toggleAction]);
-  const fullScreenAction = (0, import_react2.useCallback)(() => {
+  const fullScreenAction = (0, import_react3.useCallback)(() => {
     if (typeof document === "undefined") return;
     const doc = document;
     const videoEl = videoRef.current;
@@ -1282,36 +1284,36 @@ var VideoPlayerBase = (props, ref) => {
       else if (videoEl.webkitEnterFullscreen) void videoEl.webkitEnterFullscreen();
     }
   }, [fullscreenAllowed]);
-  const videoDbClickHandler = (0, import_react2.useCallback)(() => {
+  const videoDbClickHandler = (0, import_react3.useCallback)(() => {
     if (!handleClick) return;
     fullScreenAction();
     onVideoDoubleClick == null ? void 0 : onVideoDoubleClick();
   }, [fullScreenAction, handleClick, onVideoDoubleClick]);
-  const showClickHandler = (0, import_react2.useCallback)(() => {
+  const showClickHandler = (0, import_react3.useCallback)(() => {
     setControlVisible((st) => !st);
   }, []);
-  const retryLoadHandler = (0, import_react2.useCallback)(() => {
+  const retryLoadHandler = (0, import_react3.useCallback)(() => {
     clearErrorState();
     setReloadToken((value) => value + 1);
   }, [clearErrorState]);
-  const videoErrorHandler = (0, import_react2.useCallback)(() => {
+  const videoErrorHandler = (0, import_react3.useCallback)(() => {
     const video = videoRef.current;
     const error = video == null ? void 0 : video.error;
     const src = (video == null ? void 0 : video.currentSrc) || videoSrc;
     if (hlsRef.current && src.startsWith("blob:")) return;
     reportError(error, { type: "native", src }, getNativeVideoErrorMessage(error, messages));
   }, [messages, reportError, videoSrc]);
-  const videoLoadedHandler = (0, import_react2.useCallback)(() => {
+  const videoLoadedHandler = (0, import_react3.useCallback)(() => {
     clearErrorState();
   }, [clearErrorState]);
-  const mouseMoveHandler = (0, import_react2.useCallback)(() => {
+  const mouseMoveHandler = (0, import_react3.useCallback)(() => {
     if (controlTime.current) clearTimeout(controlTime.current);
     setControlVisible(true);
     controlTime.current = setTimeout(() => {
       setControlVisible(false);
     }, 1e3 * 10);
   }, []);
-  (0, import_react2.useImperativeHandle)(
+  (0, import_react3.useImperativeHandle)(
     ref,
     () => ({
       play: playAction,
@@ -1322,24 +1324,24 @@ var VideoPlayerBase = (props, ref) => {
     }),
     [fullScreenAction, pauseAction, playAction, seekSetTime]
   );
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const el = videoRef.current;
     if (!el) return;
     el.muted = muted;
   }, [muted]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (playingProp === void 0) return;
     if (!canAttemptPlayback(videoRef.current)) return;
     if (playingProp) void playAction();
     else pauseAction();
   }, [pauseAction, playAction, playingProp]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const el = videoRef.current;
     if (!el || currentTimeProp === void 0) return;
     if (Math.abs(el.currentTime - currentTimeProp) < 0.25) return;
     el.currentTime = clampTime(currentTimeProp, duration);
   }, [currentTimeProp, duration]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!videoRef.current) return;
     clearErrorState();
     fatalReloadCount.current = 0;
@@ -1375,12 +1377,12 @@ var VideoPlayerBase = (props, ref) => {
     type,
     videoSrc
   ]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!autoPlay) return;
     if (!canAttemptPlayback(videoRef.current)) return;
     void playAction();
   }, [autoPlay, playAction]);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (typeof document === "undefined") return;
     const doc = document;
     const handleFsChange = () => {
@@ -1398,7 +1400,7 @@ var VideoPlayerBase = (props, ref) => {
       document.removeEventListener("MSFullscreenChange", handleFsChange);
     };
   }, []);
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     return () => {
       setTimeD.current.cancel();
       destroy();
@@ -1483,7 +1485,7 @@ var VideoPlayerBase = (props, ref) => {
     }
   );
 };
-var VideoPlayer = (0, import_react2.memo)((0, import_react2.forwardRef)(VideoPlayerBase));
+var VideoPlayer = (0, import_react3.memo)((0, import_react3.forwardRef)(VideoPlayerBase));
 var VideoPlayer_default = VideoPlayer;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

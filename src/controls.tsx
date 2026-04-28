@@ -1,6 +1,6 @@
 'use client';
 
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
+import { useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { SeekSliderStyled, VideoPlayerControlStyles } from './styles';
 import { formatTime, useWindowWidth } from './utils';
 
@@ -14,6 +14,7 @@ interface SeekSliderProps {
 }
 
 const SeekSlider = ({ playAction, duration, currentTime, seekSetTime }: SeekSliderProps) => {
+  const ref = useRef<HTMLInputElement>(null);
   const clickHandler = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -23,11 +24,15 @@ const SeekSlider = ({ playAction, duration, currentTime, seekSetTime }: SeekSlid
   const safeCurrentTime = Math.max(0, Math.min(Number.isFinite(currentTime) ? currentTime : 0, safeDuration || Infinity));
   const completeChange = () => {
     void playAction();
+    if (ref.current) {
+      ref.current.blur();
+    }
   };
 
   return (
     <SeekSliderStyled onClick={clickHandler} className="seek-slider">
       <input
+        ref={ref}
         aria-label="Seek"
         className="seek-range"
         disabled={safeDuration <= 0}
@@ -178,29 +183,6 @@ export const VideoPlayerControls = (props: VideoPlayerControlsProps) => {
   const [, isMobile] = useWindowWidth();
 
   if (variant === 'none') return null;
-
-  if (variant === 'tiny') {
-    return (
-      <VideoPlayerControlStyles $tiny $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
-        <div className="video-player-control-row">
-          <div className="full" />
-          <SeekSlider playAction={playAction} duration={duration} currentTime={currentTime} seekSetTime={seekSetTime} />
-        </div>
-      </VideoPlayerControlStyles>
-    );
-  }
-
-  if (variant === 'fullscreen-only') {
-    return (
-      <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
-        <div className="video-player-control-row">
-          <div className="full" />
-          <ControlButton icon={muted ? 'mute' : 'sound'} label={muted ? 'Unmute' : 'Mute'} onClick={() => onMutedChange(!muted)} />
-          <ControlButton disabled={!fullscreenAllowed} icon="fullscreen" label="Fullscreen" onClick={fullScreenAction} />
-        </div>
-      </VideoPlayerControlStyles>
-    );
-  }
 
   return (
     <VideoPlayerControlStyles $isMobile={isMobile} onClick={stopControlClick} $showControl={showControl}>
