@@ -37,7 +37,7 @@ export function Example() {
 }
 ```
 
-When `active` is `true`, pressing `F` toggles fullscreen. When `active` is `false`, the player releases native media loading so inactive MP4 players do not keep network requests open.
+When `active` is `true`, pressing `F` toggles fullscreen. When `active` is `false`, the player releases native playback loading so inactive MP4 players do not keep playback requests open; with `preload="metadata"`, inactive native videos still load metadata.
 
 For public CDN-hosted videos, prefer non-credentialed requests unless the CDN is explicitly configured for cookies:
 

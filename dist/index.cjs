@@ -781,6 +781,9 @@ var isLikelyHlsSource = (src) => {
     return /\.m3u8($|[?#])/i.test(src);
   }
 };
+var getSourceLoadMode = (sourceType, type, src) => {
+  return sourceType === "hls" || sourceType !== "native" && type !== "video" && isLikelyHlsSource(src) ? "hls" : "native";
+};
 var assignRef = (ref, value) => {
   if (!ref) return;
   if (typeof ref === "function") {
@@ -1275,15 +1278,20 @@ var VideoPlayerBase = (props, ref) => {
       videoSrc
     ]
   );
-  const loadVideoNative = (0, import_react3.useCallback)((loadId = sourceLoadId.current) => {
-    if (loadId !== sourceLoadId.current) return;
-    const video = videoRef.current;
-    if (!video) return;
-    sourceLoadMode.current = "native";
-    video.src = videoSrc;
-    video.currentTime = initialTime;
-    if (autoPlay) void playAction();
-  }, [autoPlay, initialTime, playAction, videoSrc]);
+  const loadVideoNative = (0, import_react3.useCallback)(
+    (loadId = sourceLoadId.current, options) => {
+      if (loadId !== sourceLoadId.current) return;
+      const video = videoRef.current;
+      if (!video) return;
+      sourceLoadMode.current = "native";
+      video.src = videoSrc;
+      if (!(options == null ? void 0 : options.metadataOnly)) {
+        video.currentTime = initialTime;
+        if (autoPlay) void playAction();
+      }
+    },
+    [autoPlay, initialTime, playAction, videoSrc]
+  );
   const loadVideoHls = (0, import_react3.useCallback)(async (loadId = sourceLoadId.current) => {
     const video = videoRef.current;
     const canNativeHls = !!(video == null ? void 0 : video.canPlayType) && video.canPlayType("application/vnd.apple.mpegurl") !== "";
@@ -1438,9 +1446,14 @@ var VideoPlayerBase = (props, ref) => {
     liveStabilityMode.current = false;
     liveStallEvents.current = [];
     resetMediaForSourceChange();
-    if (active === false) return;
-    const nextSourceLoadMode = sourceType === "hls" || sourceType !== "native" && type !== "video" && isLikelyHlsSource(videoSrc) ? "hls" : "native";
+    const nextSourceLoadMode = getSourceLoadMode(sourceType, type, videoSrc);
     sourceLoadMode.current = nextSourceLoadMode;
+    if (active === false) {
+      if (nextSourceLoadMode === "native" && preload === "metadata") {
+        loadVideoNative(loadId, { metadataOnly: true });
+      }
+      return;
+    }
     if (nextSourceLoadMode === "hls") {
       if (sourceType === "hls") void loadVideo(initialTime, loadId);
       else void loadVideoHls(loadId);
