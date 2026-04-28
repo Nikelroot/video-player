@@ -1,0 +1,50 @@
+{
+  "name": "@nikelroot/video-player",
+  "version": "0.1.0",
+  "description": "Standalone React video player with HLS support.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "hls.js": "^1.6.15"
+  },
+  "peerDependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "antd": "^6.3.1",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "styled-components": "^6.0.0"
+  },
+  "devDependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@types/node": "^25.3.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "antd": "^6.3.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "styled-components": "^6.3.11",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
