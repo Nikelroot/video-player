@@ -988,6 +988,14 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     };
   }, [destroy]);
 
+  const lastActiveState = useRef(active);
+  useEffect(() => {
+    if (active !== lastActiveState.current){
+      playAction();
+      lastActiveState.current = active;
+    }
+  },[active])
+
   return (
     <VideoPlayerStyles
       ref={containerRef}

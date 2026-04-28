@@ -1,6 +1,6 @@
 {
   "name": "@nikelroot/video-player",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Standalone React video player with HLS support.",
   "type": "module",
   "main": "./dist/index.cjs",

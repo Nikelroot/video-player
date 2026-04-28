@@ -1409,6 +1409,13 @@ var VideoPlayerBase = (props, ref) => {
       destroy();
     };
   }, [destroy]);
+  const lastActiveState = useRef2(active);
+  useEffect(() => {
+    if (active !== lastActiveState.current) {
+      playAction();
+      lastActiveState.current = active;
+    }
+  }, [active]);
   return /* @__PURE__ */ jsxs2(
     VideoPlayerStyles,
     {
