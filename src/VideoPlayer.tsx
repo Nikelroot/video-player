@@ -318,9 +318,13 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   const playing = playingProp ?? playingState;
   const muted = mutedProp ?? mutedState;
+  const isDurationControlled = durationProp !== undefined;
+  const isCurrentTimeControlled = currentTimeProp !== undefined;
   const duration = durationProp ?? durationState;
   const currentTime = currentTimeProp ?? currentTimeState;
   const fullscreenAllowed = active ?? true;
+  const onTimeChangeRef = useRef(onTimeChange);
+  const onDurationChangeRef = useRef(onDurationChange);
 
   const setTimeD = useRef(
     createThrottledNumberFn((value: number) => {
@@ -393,21 +397,29 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
     [onActiveChange]
   );
 
+  useEffect(() => {
+    onTimeChangeRef.current = onTimeChange;
+  }, [onTimeChange]);
+
+  useEffect(() => {
+    onDurationChangeRef.current = onDurationChange;
+  }, [onDurationChange]);
+
   const onTime = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-    if (currentTimeProp === undefined) setCurrentTimeState(nextTime);
-    onTimeChange?.(nextTime, el);
-  }, [currentTimeProp, onTimeChange]);
+    if (!isCurrentTimeControlled) setCurrentTimeState(nextTime);
+    onTimeChangeRef.current?.(nextTime, el);
+  }, [isCurrentTimeControlled]);
 
   const onDur = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
     const nextDuration = Number.isFinite(el.duration) ? el.duration : 0;
-    if (durationProp === undefined) setDurationState(nextDuration);
-    onDurationChange?.(nextDuration, el);
-  }, [durationProp, onDurationChange]);
+    if (!isDurationControlled) setDurationState(nextDuration);
+    onDurationChangeRef.current?.(nextDuration, el);
+  }, [isDurationControlled]);
 
   const setVideoEl = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -990,11 +1002,13 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   const lastActiveState = useRef(active);
   useEffect(() => {
-    if (active !== lastActiveState.current){
-      playAction();
-      lastActiveState.current = active;
+    const prevActive = lastActiveState.current;
+    lastActiveState.current = active;
+
+    if (active === true && prevActive !== true) {
+      void playAction();
     }
-  },[active])
+  }, [active, playAction]);
 
   return (
     <VideoPlayerStyles

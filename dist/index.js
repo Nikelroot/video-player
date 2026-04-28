@@ -835,9 +835,13 @@ var VideoPlayerBase = (props, ref) => {
   const [reloadToken, setReloadToken] = useState(0);
   const playing = playingProp != null ? playingProp : playingState;
   const muted = mutedProp != null ? mutedProp : mutedState;
+  const isDurationControlled = durationProp !== void 0;
+  const isCurrentTimeControlled = currentTimeProp !== void 0;
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeProp != null ? currentTimeProp : currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
+  const onTimeChangeRef = useRef2(onTimeChange);
+  const onDurationChangeRef = useRef2(onDurationChange);
   const setTimeD = useRef2(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
@@ -901,20 +905,28 @@ var VideoPlayerBase = (props, ref) => {
     },
     [onActiveChange]
   );
+  useEffect(() => {
+    onTimeChangeRef.current = onTimeChange;
+  }, [onTimeChange]);
+  useEffect(() => {
+    onDurationChangeRef.current = onDurationChange;
+  }, [onDurationChange]);
   const onTime = useCallback(() => {
+    var _a;
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-    if (currentTimeProp === void 0) setCurrentTimeState(nextTime);
-    onTimeChange == null ? void 0 : onTimeChange(nextTime, el);
-  }, [currentTimeProp, onTimeChange]);
+    if (!isCurrentTimeControlled) setCurrentTimeState(nextTime);
+    (_a = onTimeChangeRef.current) == null ? void 0 : _a.call(onTimeChangeRef, nextTime, el);
+  }, [isCurrentTimeControlled]);
   const onDur = useCallback(() => {
+    var _a;
     const el = videoRef.current;
     if (!el) return;
     const nextDuration = Number.isFinite(el.duration) ? el.duration : 0;
-    if (durationProp === void 0) setDurationState(nextDuration);
-    onDurationChange == null ? void 0 : onDurationChange(nextDuration, el);
-  }, [durationProp, onDurationChange]);
+    if (!isDurationControlled) setDurationState(nextDuration);
+    (_a = onDurationChangeRef.current) == null ? void 0 : _a.call(onDurationChangeRef, nextDuration, el);
+  }, [isDurationControlled]);
   const setVideoEl = useCallback(
     (el) => {
       const prev = videoRef.current;
@@ -1411,11 +1423,12 @@ var VideoPlayerBase = (props, ref) => {
   }, [destroy]);
   const lastActiveState = useRef2(active);
   useEffect(() => {
-    if (active !== lastActiveState.current) {
-      playAction();
-      lastActiveState.current = active;
+    const prevActive = lastActiveState.current;
+    lastActiveState.current = active;
+    if (active === true && prevActive !== true) {
+      void playAction();
     }
-  }, [active]);
+  }, [active, playAction]);
   return /* @__PURE__ */ jsxs2(
     VideoPlayerStyles,
     {
