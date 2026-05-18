@@ -711,7 +711,7 @@ var canAttemptPlayback = (video) => {
   return !!video && video.readyState >= HTMLMediaElement.HAVE_METADATA;
 };
 var isVideoSourceAttached = (video) => {
-  return !!video.currentSrc || !!video.getAttribute("src");
+  return !!video.getAttribute("src");
 };
 function hasNativeHlsSupport() {
   if (typeof navigator === "undefined" || typeof document === "undefined") return false;
@@ -834,6 +834,7 @@ var VideoPlayerBase = (props, ref) => {
   const sourceLoadId = useRef2(0);
   const sourceLoadMode = useRef2("native");
   const pendingPlay = useRef2(false);
+  const playRequestInFlight = useRef2(false);
   const [playingState, setPlayingState] = useState(!!defaultPlaying);
   const [mutedState, setMutedState] = useState(!!defaultMuted);
   const [durationState, setDurationState] = useState(0);
@@ -1007,12 +1008,9 @@ var VideoPlayerBase = (props, ref) => {
     if (!el) return;
     pendingPlay.current = true;
     pauseOtherVideos(el);
-    const attachedNativeMedia = ensureNativeMediaAttached();
-    if (sourceLoadMode.current === "native" && !canAttemptPlayback(el)) {
-      if (attachedNativeMedia) clearErrorState();
-      return;
-    }
+    ensureNativeMediaAttached();
     try {
+      playRequestInFlight.current = true;
       await el.play();
       pendingPlay.current = false;
       clearErrorState();
@@ -1026,6 +1024,8 @@ var VideoPlayerBase = (props, ref) => {
       pendingPlay.current = false;
       console.debug(e);
       reportError(e, { type: "play" }, messages.playFailed);
+    } finally {
+      playRequestInFlight.current = false;
     }
     if (scrollTo === true) {
       const rect = el.getBoundingClientRect();
@@ -1385,6 +1385,7 @@ var VideoPlayerBase = (props, ref) => {
   }, [messages, reportError, videoSrc]);
   const videoLoadedHandler = useCallback(() => {
     clearErrorState();
+    if (playRequestInFlight.current) return;
     if (!pendingPlay.current || active === false || !canAttemptPlayback(videoRef.current)) return;
     void playAction();
   }, [active, clearErrorState, playAction]);

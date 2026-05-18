@@ -177,7 +177,7 @@ const canAttemptPlayback = (video: HTMLVideoElement | null | undefined) => {
 };
 
 const isVideoSourceAttached = (video: HTMLVideoElement) => {
-  return !!video.currentSrc || !!video.getAttribute('src');
+  return !!video.getAttribute('src');
 };
 
 export function hasNativeHlsSupport() {
@@ -318,6 +318,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
   const sourceLoadId = useRef(0);
   const sourceLoadMode = useRef<SourceLoadMode>('native');
   const pendingPlay = useRef(false);
+  const playRequestInFlight = useRef(false);
 
   const [playingState, setPlayingState] = useState(!!defaultPlaying);
   const [mutedState, setMutedState] = useState(!!defaultMuted);
@@ -522,14 +523,10 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
     pendingPlay.current = true;
     pauseOtherVideos(el);
-    const attachedNativeMedia = ensureNativeMediaAttached();
-
-    if (sourceLoadMode.current === 'native' && !canAttemptPlayback(el)) {
-      if (attachedNativeMedia) clearErrorState();
-      return;
-    }
+    ensureNativeMediaAttached();
 
     try {
+      playRequestInFlight.current = true;
       await el.play();
       pendingPlay.current = false;
       clearErrorState();
@@ -543,6 +540,8 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
       pendingPlay.current = false;
       console.debug(e);
       reportError(e, { type: 'play' }, messages.playFailed);
+    } finally {
+      playRequestInFlight.current = false;
     }
 
     if (scrollTo === true) {
@@ -956,6 +955,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   const videoLoadedHandler = useCallback(() => {
     clearErrorState();
+    if (playRequestInFlight.current) return;
     if (!pendingPlay.current || active === false || !canAttemptPlayback(videoRef.current)) return;
     void playAction();
   }, [active, clearErrorState, playAction]);
