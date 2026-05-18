@@ -400,10 +400,12 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   const ensureNativeMediaAttached = useCallback(() => {
     const video = videoRef.current;
-    if (!video || sourceLoadMode.current !== 'native' || isVideoSourceAttached(video)) return;
+    if (!video || sourceLoadMode.current !== 'native' || isVideoSourceAttached(video)) return false;
 
     video.src = videoSrc;
     if (initialTime > 0) video.currentTime = initialTime;
+    video.load();
+    return true;
   }, [initialTime, videoSrc]);
 
   const setNextPlaying = useCallback(
@@ -520,9 +522,12 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
     pendingPlay.current = true;
     pauseOtherVideos(el);
-    ensureNativeMediaAttached();
+    const attachedNativeMedia = ensureNativeMediaAttached();
 
-    if (sourceLoadMode.current === 'native' && !canAttemptPlayback(el)) return;
+    if (sourceLoadMode.current === 'native' && !canAttemptPlayback(el)) {
+      if (attachedNativeMedia) clearErrorState();
+      return;
+    }
 
     try {
       await el.play();
@@ -987,7 +992,6 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
 
   useEffect(() => {
     if (playingProp === undefined) return;
-    if (!canAttemptPlayback(videoRef.current)) return;
     if (playingProp) void playAction();
     else pauseAction();
   }, [pauseAction, playAction, playingProp]);
@@ -1163,6 +1167,7 @@ const VideoPlayerBase = (props: VideoPlayerProps, ref: React.ForwardedRef<VideoP
           onPlay={() => setNextPlaying(true)}
           onPause={() => setNextPlaying(false)}
           onEnded={() => setNextPlaying(false)}
+          onLoadedMetadata={videoLoadedHandler}
           onLoadedData={videoLoadedHandler}
           onCanPlay={videoLoadedHandler}
           onError={videoErrorHandler}
