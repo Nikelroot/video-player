@@ -862,6 +862,7 @@ var VideoPlayerBase = (props, ref) => {
   const controlTime = (0, import_react3.useRef)(null);
   const sourceLoadId = (0, import_react3.useRef)(0);
   const sourceLoadMode = (0, import_react3.useRef)("native");
+  const pendingPlay = (0, import_react3.useRef)(false);
   const [playingState, setPlayingState] = (0, import_react3.useState)(!!defaultPlaying);
   const [mutedState, setMutedState] = (0, import_react3.useState)(!!defaultMuted);
   const [durationState, setDurationState] = (0, import_react3.useState)(0);
@@ -907,6 +908,7 @@ var VideoPlayerBase = (props, ref) => {
   }, []);
   const resetMediaForSourceChange = (0, import_react3.useCallback)(() => {
     clearTimers();
+    pendingPlay.current = false;
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -920,6 +922,7 @@ var VideoPlayerBase = (props, ref) => {
   const releaseNativeMedia = (0, import_react3.useCallback)(() => {
     const video = videoRef.current;
     if (!video) return;
+    pendingPlay.current = false;
     video.pause();
     if (sourceLoadMode.current !== "native" || !isVideoSourceAttached(video)) return;
     video.removeAttribute("src");
@@ -1029,15 +1032,22 @@ var VideoPlayerBase = (props, ref) => {
   const playAction = (0, import_react3.useCallback)(async () => {
     const el = videoRef.current;
     if (!el) return;
+    pendingPlay.current = true;
     pauseOtherVideos(el);
     ensureNativeMediaAttached();
+    if (sourceLoadMode.current === "native" && !canAttemptPlayback(el)) return;
     try {
       await el.play();
+      pendingPlay.current = false;
       clearErrorState();
       setNextPlaying(true);
       notifyActiveChange(el, "play");
     } catch (e) {
-      if (isInterruptedPlayRequestError(e)) return;
+      if (isInterruptedPlayRequestError(e)) {
+        pendingPlay.current = true;
+        return;
+      }
+      pendingPlay.current = false;
       console.debug(e);
       reportError(e, { type: "play" }, messages.playFailed);
     }
@@ -1065,6 +1075,7 @@ var VideoPlayerBase = (props, ref) => {
   const pauseAction = (0, import_react3.useCallback)(() => {
     const el = videoRef.current;
     if (!el) return;
+    pendingPlay.current = false;
     el.pause();
     setNextPlaying(false);
     notifyActiveChange(el, "pause");
@@ -1393,11 +1404,14 @@ var VideoPlayerBase = (props, ref) => {
     const error = video == null ? void 0 : video.error;
     const src = (video == null ? void 0 : video.currentSrc) || videoSrc;
     if (hlsRef.current && src.startsWith("blob:")) return;
+    pendingPlay.current = false;
     reportError(error, { type: "native", src }, getNativeVideoErrorMessage(error, messages));
   }, [messages, reportError, videoSrc]);
   const videoLoadedHandler = (0, import_react3.useCallback)(() => {
     clearErrorState();
-  }, [clearErrorState]);
+    if (!pendingPlay.current || active === false || !canAttemptPlayback(videoRef.current)) return;
+    void playAction();
+  }, [active, clearErrorState, playAction]);
   const mouseMoveHandler = (0, import_react3.useCallback)(() => {
     if (controlTime.current) clearTimeout(controlTime.current);
     if (!showControlRef.current) {
