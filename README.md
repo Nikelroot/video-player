@@ -25,9 +25,8 @@ export function Example() {
 
   return (
     <VideoPlayer
-      videoRef={videoRef}
       videoSrc="https://example.com/stream.m3u8"
-      controlsVariant="full"
+      videoRef={videoRef}
       active={true}
       live={false}
       autoPlay={false}
@@ -36,6 +35,8 @@ export function Example() {
   );
 }
 ```
+
+Only `videoSrc` is required. `controlsVariant` defaults to `"none"`; set it to `"full"`, `"fullscreen-only"`, or `"tiny"` to render built-in controls.
 
 When `active` is `true`, pressing `F` toggles fullscreen.
 

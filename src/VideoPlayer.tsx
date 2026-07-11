@@ -88,7 +88,7 @@ export interface VideoPlayerProps
   videoSrc: string;
   sourceType?: 'auto' | 'hls' | 'native';
   type?: string;
-  controlsVariant: ControlsVariant;
+  controlsVariant?: ControlsVariant;
   active?: boolean;
   autoPlay?: boolean;
   preload?: '' | 'none' | 'auto' | 'metadata';
