@@ -158,6 +158,18 @@ export const VideoPlayerStyles = styled.div<{
     align-items: center;
   }
 
+  .video-audio-status {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    color: inherit;
+    background: rgb(24 27 31 / 85%);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    pointer-events: none;
+  }
+
   .video-error-overlay {
     position: absolute;
     inset: 0;

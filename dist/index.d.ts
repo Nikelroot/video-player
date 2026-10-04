@@ -32,8 +32,17 @@ interface VideoPlayerPlaybackError {
     message: string;
     details: string[];
 }
+interface AudioRange {
+    start: number;
+    end: number;
+}
 interface VideoPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoElement>, 'src' | 'controls' | 'autoPlay' | 'muted' | 'title' | 'onError' | 'onTimeUpdate' | 'onDurationChange' | 'onPlay' | 'onPause'> {
     videoSrc: string;
+    /** Video-only HLS on the same presentation timeline as videoSrc. */
+    videoOnlySrc?: string;
+    /** Undefined means unknown; an empty array means no recorded audio. */
+    audioRanges?: readonly AudioRange[];
+    onAudioFallbackChange?: (videoOnly: boolean) => void;
     sourceType?: 'auto' | 'hls' | 'native';
     type?: string;
     controlsVariant?: ControlsVariant;
@@ -85,4 +94,4 @@ interface VideoPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoEleme
 declare function hasNativeHlsSupport(): boolean;
 declare const VideoPlayer: React.NamedExoticComponent<VideoPlayerProps & React.RefAttributes<VideoPlayerHandle>>;
 
-export { type ControlsVariant, VideoPlayer, type VideoPlayerActiveChangePayload, type VideoPlayerHandle, type VideoPlayerMessages, type VideoPlayerPlaybackError, type VideoPlayerProps, VideoPlayer as default, hasNativeHlsSupport };
+export { type AudioRange, type ControlsVariant, VideoPlayer, type VideoPlayerActiveChangePayload, type VideoPlayerHandle, type VideoPlayerMessages, type VideoPlayerPlaybackError, type VideoPlayerProps, VideoPlayer as default, hasNativeHlsSupport };

@@ -80,3 +80,25 @@ Build before publishing:
 ```bash
 npm run build
 ```
+
+## Separate audio and video recordings
+
+Provide the HLS master as `videoSrc`, the video media playlist as `videoOnlySrc`,
+and available audio intervals in seconds on the same recording timeline:
+
+```tsx
+<VideoPlayer
+  videoSrc="https://cdn.example.com/record/master.m3u8"
+  videoOnlySrc="https://cdn.example.com/record/video.m3u8"
+  audioRanges={[{ start: 0, end: 120 }, { start: 135, end: 240 }]}
+  onAudioFallbackChange={(videoOnly) => console.log({ videoOnly })}
+/>
+```
+
+Missing audio switches playback to the video playlist while retaining position,
+playing or paused state, speed, volume, and mute. Playback returns to the master
+when the current position has at least four seconds of available audio. Audio
+request failures impose a 15-second retry cooldown. Update `audioRanges` as a
+live recording grows; callbacks and metadata updates do not reload the source.
+The player displays a nonblocking status while playing without audio.
+Both media playlists and their fragment timestamps must use the same timeline.

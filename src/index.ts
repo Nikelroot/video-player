@@ -2,6 +2,7 @@ export {
   default,
   VideoPlayer,
   hasNativeHlsSupport,
+  type AudioRange,
   type VideoPlayerActiveChangePayload,
   type VideoPlayerHandle,
   type VideoPlayerMessages,

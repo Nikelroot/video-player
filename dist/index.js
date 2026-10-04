@@ -2,16 +2,115 @@
 import {
   forwardRef,
   memo,
-  useCallback,
-  useEffect,
+  useCallback as useCallback2,
+  useEffect as useEffect2,
   useImperativeHandle,
   useMemo as useMemo2,
-  useRef as useRef2,
-  useState
+  useRef as useRef3,
+  useState as useState2
 } from "react";
 
+// src/useAudioFallback.ts
+import { useCallback, useEffect, useRef, useState } from "react";
+function useAudioFallback(options) {
+  const latest = useRef(options);
+  latest.current = options;
+  const [videoOnly, setVideoOnly] = useState(Boolean(options.fallback));
+  const mode = useRef(Boolean(options.fallback));
+  const progress = useRef({ time: 0, at: Date.now(), failed: false });
+  const cooldown = useRef(0);
+  const audioErrors = useRef(0);
+  const audioErrorTimer = useRef(null);
+  const snapshot = useRef(null);
+  const switchSource = useCallback((next, failure = false) => {
+    const { video, fallback, onChange } = latest.current;
+    const element = video.current;
+    if (!fallback || !element || mode.current === next) return false;
+    snapshot.current = {
+      time: Number.isFinite(element.currentTime) ? element.currentTime : 0,
+      playing: latest.current.playingIntent.current,
+      rate: element.playbackRate,
+      volume: element.volume,
+      muted: element.muted
+    };
+    mode.current = next;
+    progress.current = { time: element.currentTime, at: Date.now(), failed: false };
+    audioErrors.current = 0;
+    if (audioErrorTimer.current) clearTimeout(audioErrorTimer.current);
+    audioErrorTimer.current = null;
+    if (failure) cooldown.current = Date.now() + 15e3;
+    setVideoOnly(next);
+    onChange == null ? void 0 : onChange(next);
+    return true;
+  }, []);
+  const onAudioError = useCallback((data) => {
+    var _a, _b;
+    if (!latest.current.fallback || mode.current) return false;
+    const isAudio = ((_a = data == null ? void 0 : data.frag) == null ? void 0 : _a.type) === "audio" || (data == null ? void 0 : data.parent) === "audio" || ((_b = data == null ? void 0 : data.context) == null ? void 0 : _b.type) === "audioTrack" || /^audioTrack/.test((data == null ? void 0 : data.details) || "");
+    if (!isAudio) return false;
+    audioErrors.current++;
+    if ((data == null ? void 0 : data.fatal) || audioErrors.current >= 2) return switchSource(true, true);
+    if (!audioErrorTimer.current) {
+      audioErrorTimer.current = setTimeout(() => {
+        audioErrorTimer.current = null;
+        switchSource(true, true);
+      }, 8e3);
+    }
+    return true;
+  }, [switchSource]);
+  const onAudioProgress = useCallback(() => {
+    audioErrors.current = 0;
+    if (audioErrorTimer.current) clearTimeout(audioErrorTimer.current);
+    audioErrorTimer.current = null;
+  }, []);
+  useEffect(() => {
+    mode.current = Boolean(options.fallback);
+    setVideoOnly(Boolean(options.fallback));
+    progress.current = { time: 0, at: Date.now(), failed: false };
+    snapshot.current = null;
+    cooldown.current = 0;
+    onAudioProgress();
+    return onAudioProgress;
+  }, [options.primary, options.fallback, onAudioProgress]);
+  useEffect(() => {
+    const check = () => {
+      const { ranges, video, fallback, playingIntent, onStall } = latest.current;
+      if (!fallback) return;
+      const element = video.current;
+      if (!element) return;
+      const time = element.currentTime;
+      const now = Date.now();
+      const previous = progress.current;
+      if (!playingIntent.current || element.ended || Math.abs(time - previous.time) > 0.05) {
+        progress.current = { time, at: now, failed: false };
+      } else if (!previous.failed && now - previous.at >= 8e3) {
+        if (!mode.current) switchSource(true, true);
+        else {
+          progress.current.failed = true;
+          onStall == null ? void 0 : onStall();
+        }
+        return;
+      }
+      if (!ranges || snapshot.current) return;
+      const available = ranges.some((range) => time >= range.start + 0.1 && time < range.end - 0.1);
+      if (!mode.current && !available) switchSource(true);
+      else if (mode.current && available && now >= cooldown.current && ranges.some((range) => time >= range.start + 0.1 && time + 4 <= range.end)) switchSource(false);
+    };
+    const timer = setInterval(check, 500);
+    return () => clearInterval(timer);
+  }, [switchSource]);
+  return {
+    videoOnly,
+    source: videoOnly && options.fallback ? options.fallback : options.primary,
+    snapshot,
+    switchSource,
+    onAudioError,
+    onAudioProgress
+  };
+}
+
 // src/controls.tsx
-import { useRef } from "react";
+import { useRef as useRef2 } from "react";
 
 // src/styles.ts
 import { css, styled } from "styled-components";
@@ -149,6 +248,18 @@ var VideoPlayerStyles = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  .video-audio-status {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    color: inherit;
+    background: rgb(24 27 31 / 85%);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    pointer-events: none;
   }
 
   .video-error-overlay {
@@ -401,7 +512,7 @@ var createThrottledNumberFn = (fn, waitMs) => {
 // src/controls.tsx
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var SeekSlider = ({ playAction, duration, currentTime, seekSetTime }) => {
-  const ref = useRef(null);
+  const ref = useRef2(null);
   const clickHandler = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -815,56 +926,69 @@ var VideoPlayerBase = (props, ref) => {
     messages: messagesProp,
     accentColor,
     videoSrc: rawVideoSrc = "",
+    videoOnlySrc,
+    audioRanges,
+    onAudioFallbackChange,
     ...videoProps
   } = props;
-  const videoSrc = rawVideoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
+  const primarySrc = rawVideoSrc.replaceAll(" ", "%20").replaceAll("#", "%23");
+  const propsRef = useRef3(props);
+  propsRef.current = props;
   const messages = useMemo2(() => ({ ...defaultMessages, ...messagesProp }), [messagesProp]);
   const [, isMobile, mobileType] = useWindowWidth();
-  const videoRef = useRef2(null);
-  const hlsRef = useRef2(null);
-  const containerRef = useRef2(null);
-  const netRetryCount = useRef2(0);
-  const mediaRecoverCount = useRef2(0);
-  const fatalReloadCount = useRef2(0);
-  const reloadTimer = useRef2(null);
-  const stalledNudgeTimer = useRef2(null);
-  const liveStabilityMode = useRef2(false);
-  const liveStallEvents = useRef2([]);
-  const controlTime = useRef2(null);
-  const sourceLoadId = useRef2(0);
-  const sourceLoadMode = useRef2("native");
-  const pendingPlay = useRef2(false);
-  const playRequestInFlight = useRef2(false);
-  const [playingState, setPlayingState] = useState(!!defaultPlaying);
-  const [mutedState, setMutedState] = useState(!!defaultMuted);
-  const [durationState, setDurationState] = useState(0);
-  const [currentTimeState, setCurrentTimeState] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControl, setControlVisible] = useState(true);
-  const [errorState, setErrorState] = useState(null);
-  const [reloadToken, setReloadToken] = useState(0);
-  const showControlRef = useRef2(showControl);
+  const videoRef = useRef3(null);
+  const playbackIntent = useRef3(autoPlay || defaultPlaying || Boolean(playingProp));
+  const stallReporter = useRef3(() => {
+  });
+  const audioFallback = useAudioFallback({ primary: primarySrc, fallback: videoOnlySrc, ranges: audioRanges, video: videoRef, playingIntent: playbackIntent, onChange: onAudioFallbackChange, onStall: () => stallReporter.current() });
+  const videoSrc = audioFallback.source;
+  const { snapshot: resumeSnapshot, onAudioError, onAudioProgress, switchSource } = audioFallback;
+  const hlsRef = useRef3(null);
+  const containerRef = useRef3(null);
+  const lastProgressTime = useRef3(0);
+  const netRetryCount = useRef3(0);
+  const mediaRecoverCount = useRef3(0);
+  const fatalReloadCount = useRef3(0);
+  const reloadTimer = useRef3(null);
+  const stalledNudgeTimer = useRef3(null);
+  const liveStabilityMode = useRef3(false);
+  const liveStallEvents = useRef3([]);
+  const controlTime = useRef3(null);
+  const sourceLoadId = useRef3(0);
+  const sourceLoadMode = useRef3("native");
+  const pendingPlay = useRef3(false);
+  const playRequestInFlight = useRef3(false);
+  const playRequestId = useRef3(0);
+  const [playingState, setPlayingState] = useState2(!!defaultPlaying);
+  const [mutedState, setMutedState] = useState2(!!defaultMuted);
+  const [durationState, setDurationState] = useState2(0);
+  const [currentTimeState, setCurrentTimeState] = useState2(0);
+  const [isFullscreen, setIsFullscreen] = useState2(false);
+  const [showControl, setControlVisible] = useState2(true);
+  const [errorState, setErrorState] = useState2(null);
+  const [reloadToken, setReloadToken] = useState2(0);
+  const showControlRef = useRef3(showControl);
   const playing = playingProp != null ? playingProp : playingState;
   const muted = mutedProp != null ? mutedProp : mutedState;
   const isDurationControlled = durationProp !== void 0;
   const duration = durationProp != null ? durationProp : durationState;
   const currentTime = currentTimeState;
   const fullscreenAllowed = active != null ? active : true;
-  const onTimeChangeRef = useRef2(onTimeChange);
-  const onDurationChangeRef = useRef2(onDurationChange);
+  const onTimeChangeRef = useRef3(onTimeChange);
+  const onDurationChangeRef = useRef3(onDurationChange);
   onTimeChangeRef.current = onTimeChange;
   onDurationChangeRef.current = onDurationChange;
   showControlRef.current = showControl;
   const { currentTime: _ignoredCurrentTime, ...domVideoProps } = videoProps;
-  const setTimeD = useRef2(
+  const setTimeD = useRef3(
     createThrottledNumberFn((value) => {
       const v = videoRef.current;
       if (!v) return;
       v.currentTime = value;
     }, 30)
   );
-  const setCurrentTimeUi = useRef2(createThrottledNumberFn((value) => setCurrentTimeState(value), 250));
-  const clearTimers = useCallback(() => {
+  const setCurrentTimeUi = useRef3(createThrottledNumberFn((value) => setCurrentTimeState(value), 250));
+  const clearTimers = useCallback2(() => {
     if (reloadTimer.current) {
       clearTimeout(reloadTimer.current);
       reloadTimer.current = null;
@@ -878,9 +1002,11 @@ var VideoPlayerBase = (props, ref) => {
       controlTime.current = null;
     }
   }, []);
-  const resetMediaForSourceChange = useCallback(() => {
+  const resetMediaForSourceChange = useCallback2(() => {
     clearTimers();
     pendingPlay.current = false;
+    playRequestId.current++;
+    playRequestInFlight.current = false;
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -891,7 +1017,7 @@ var VideoPlayerBase = (props, ref) => {
     video.removeAttribute("src");
     video.load();
   }, [clearTimers]);
-  const releaseNativeMedia = useCallback(() => {
+  const releaseNativeMedia = useCallback2(() => {
     const video = videoRef.current;
     if (!video) return;
     pendingPlay.current = false;
@@ -900,7 +1026,7 @@ var VideoPlayerBase = (props, ref) => {
     video.removeAttribute("src");
     video.load();
   }, []);
-  const ensureNativeMediaAttached = useCallback(() => {
+  const ensureNativeMediaAttached = useCallback2(() => {
     const video = videoRef.current;
     if (!video || sourceLoadMode.current !== "native" || isVideoSourceAttached(video)) return false;
     video.src = videoSrc;
@@ -908,27 +1034,30 @@ var VideoPlayerBase = (props, ref) => {
     video.load();
     return true;
   }, [initialTime, videoSrc]);
-  const setNextPlaying = useCallback(
+  const setNextPlaying = useCallback2(
     (value) => {
-      if (playingProp === void 0) setPlayingState(value);
-      onPlayingChange == null ? void 0 : onPlayingChange(value);
+      var _a, _b;
+      if (propsRef.current.playing === void 0) setPlayingState(value);
+      (_b = (_a = propsRef.current).onPlayingChange) == null ? void 0 : _b.call(_a, value);
     },
-    [onPlayingChange, playingProp]
+    []
   );
-  const setNextMuted = useCallback(
+  const setNextMuted = useCallback2(
     (value) => {
-      if (mutedProp === void 0) setMutedState(value);
+      var _a, _b;
+      if (propsRef.current.muted === void 0) setMutedState(value);
       const el = videoRef.current;
       if (el) el.muted = value;
-      onMutedChange == null ? void 0 : onMutedChange(value);
+      (_b = (_a = propsRef.current).onMutedChange) == null ? void 0 : _b.call(_a, value);
     },
-    [mutedProp, onMutedChange]
+    []
   );
-  const clearErrorState = useCallback(() => {
+  const clearErrorState = useCallback2(() => {
     setErrorState((prev) => prev ? null : prev);
   }, []);
-  const reportError = useCallback(
+  const reportError = useCallback2(
     (error, data, message = messages.defaultError) => {
+      var _a, _b;
       const details = formatPlaybackErrorDetails(error, data);
       const code = getPlaybackErrorCodeText(error);
       setNextPlaying(false);
@@ -940,25 +1069,42 @@ var VideoPlayerBase = (props, ref) => {
         error,
         data
       });
-      onPlaybackError == null ? void 0 : onPlaybackError({ error, data, message, details });
+      (_b = (_a = propsRef.current).onPlaybackError) == null ? void 0 : _b.call(_a, { error, data, message, details });
     },
-    [messages.defaultError, onPlaybackError, setNextPlaying]
+    [messages.defaultError, setNextPlaying]
   );
-  const notifyActiveChange = useCallback(
+  stallReporter.current = () => {
+    var _a, _b;
+    playbackIntent.current = false;
+    pendingPlay.current = false;
+    reportError("Playback did not advance for 8 seconds", {
+      type: "playback-stalled",
+      src: videoSrc,
+      reason: `readyState=${(_a = videoRef.current) == null ? void 0 : _a.readyState}; buffered=${(_b = videoRef.current) == null ? void 0 : _b.buffered.length}`
+    }, messages.streamLoadFailed);
+  };
+  const notifyActiveChange = useCallback2(
     (video, reason) => {
-      onActiveChange == null ? void 0 : onActiveChange({ video, reason });
+      var _a, _b;
+      (_b = (_a = propsRef.current).onActiveChange) == null ? void 0 : _b.call(_a, { video, reason });
     },
-    [onActiveChange]
+    []
   );
-  const onTime = useCallback(() => {
+  const onTime = useCallback2(() => {
     var _a;
     const el = videoRef.current;
     if (!el) return;
     const nextTime = Number.isFinite(el.currentTime) ? el.currentTime : 0;
+    if (!el.paused && !el.seeking && nextTime > lastProgressTime.current + 0.5) {
+      netRetryCount.current = 0;
+      fatalReloadCount.current = 0;
+      mediaRecoverCount.current = 0;
+      lastProgressTime.current = nextTime;
+    }
     setCurrentTimeUi.current(nextTime);
     (_a = onTimeChangeRef.current) == null ? void 0 : _a.call(onTimeChangeRef, nextTime, el);
   }, []);
-  const onDur = useCallback(() => {
+  const onDur = useCallback2(() => {
     var _a;
     const el = videoRef.current;
     if (!el) return;
@@ -966,8 +1112,9 @@ var VideoPlayerBase = (props, ref) => {
     if (!isDurationControlled) setDurationState(nextDuration);
     (_a = onDurationChangeRef.current) == null ? void 0 : _a.call(onDurationChangeRef, nextDuration, el);
   }, [isDurationControlled]);
-  const setVideoEl = useCallback(
+  const setVideoEl = useCallback2(
     (el) => {
+      var _a, _b, _c;
       const prev = videoRef.current;
       if (prev === el) return;
       if (prev) {
@@ -976,18 +1123,18 @@ var VideoPlayerBase = (props, ref) => {
         exclusiveMediaReleasers.delete(prev);
       }
       videoRef.current = el;
-      assignRef(externalVideoRef, el);
-      onVideoRefChange == null ? void 0 : onVideoRefChange(el);
+      assignRef(propsRef.current.videoRef, el);
+      (_b = (_a = propsRef.current).onVideoRefChange) == null ? void 0 : _b.call(_a, el);
       notifyActiveChange(el, "ref");
       if (!el) return;
-      el.muted = muted;
+      el.muted = (_c = propsRef.current.muted) != null ? _c : mutedState;
       el.addEventListener("timeupdate", onTime);
       el.addEventListener("durationchange", onDur);
       exclusiveMediaReleasers.set(el, releaseNativeMedia);
     },
-    [externalVideoRef, muted, notifyActiveChange, onDur, onTime, onVideoRefChange, releaseNativeMedia]
+    [notifyActiveChange, onDur, onTime, releaseNativeMedia]
   );
-  const pauseOtherVideos = useCallback(
+  const pauseOtherVideos = useCallback2(
     (el) => {
       if (!exclusivePlayback) return;
       if (typeof exclusivePlayback === "object") {
@@ -1003,20 +1150,25 @@ var VideoPlayerBase = (props, ref) => {
     },
     [exclusivePlayback]
   );
-  const playAction = useCallback(async () => {
+  const playAction = useCallback2(async () => {
     const el = videoRef.current;
     if (!el) return;
+    const requestId = ++playRequestId.current;
     pendingPlay.current = true;
+    playbackIntent.current = true;
+    if (resumeSnapshot.current) resumeSnapshot.current.playing = true;
     pauseOtherVideos(el);
     ensureNativeMediaAttached();
     try {
       playRequestInFlight.current = true;
       await el.play();
+      if (requestId !== playRequestId.current || videoRef.current !== el) return;
       pendingPlay.current = false;
       clearErrorState();
       setNextPlaying(true);
       notifyActiveChange(el, "play");
     } catch (e) {
+      if (requestId !== playRequestId.current || videoRef.current !== el) return;
       if (isInterruptedPlayRequestError(e)) {
         pendingPlay.current = true;
         return;
@@ -1025,7 +1177,7 @@ var VideoPlayerBase = (props, ref) => {
       console.debug(e);
       reportError(e, { type: "play" }, messages.playFailed);
     } finally {
-      playRequestInFlight.current = false;
+      if (requestId === playRequestId.current) playRequestInFlight.current = false;
     }
     if (scrollTo === true) {
       const rect = el.getBoundingClientRect();
@@ -1048,15 +1200,17 @@ var VideoPlayerBase = (props, ref) => {
     scrollTo,
     setNextPlaying
   ]);
-  const pauseAction = useCallback(() => {
+  const pauseAction = useCallback2(() => {
     const el = videoRef.current;
     if (!el) return;
     pendingPlay.current = false;
+    if (resumeSnapshot.current) resumeSnapshot.current.playing = false;
+    playbackIntent.current = false;
     el.pause();
     setNextPlaying(false);
     notifyActiveChange(el, "pause");
   }, [notifyActiveChange, setNextPlaying]);
-  const seekSetTime = useCallback(
+  const seekSetTime = useCallback2(
     (value) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1068,7 +1222,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [duration, notifyActiveChange]
   );
-  const seekPrevAction = useCallback(
+  const seekPrevAction = useCallback2(
     (sec = 15) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1076,7 +1230,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [seekSetTime]
   );
-  const seekNextAction = useCallback(
+  const seekNextAction = useCallback2(
     (sec = 15) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1084,7 +1238,7 @@ var VideoPlayerBase = (props, ref) => {
     },
     [seekSetTime]
   );
-  const toggleAction = useCallback(
+  const toggleAction = useCallback2(
     (force) => {
       const el = videoRef.current;
       if (!el) return;
@@ -1096,12 +1250,12 @@ var VideoPlayerBase = (props, ref) => {
     },
     [pauseAction, playAction]
   );
-  const nudgeOnStall = useCallback(() => {
+  const nudgeOnStall = useCallback2(() => {
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = Math.max(0, v.currentTime + 0.05);
   }, []);
-  const shouldSwitchLiveToStability = useCallback(() => {
+  const shouldSwitchLiveToStability = useCallback2(() => {
     if (!live || liveStabilityMode.current) return false;
     const now = Date.now();
     liveStallEvents.current = [...liveStallEvents.current.filter((ts) => now - ts <= LIVE_STALL_WINDOW_MS), now];
@@ -1110,7 +1264,7 @@ var VideoPlayerBase = (props, ref) => {
     liveStallEvents.current = [];
     return true;
   }, [live]);
-  const resolvedHlsConfig = useCallback(() => {
+  const resolvedHlsConfig = useCallback2(() => {
     const modeConfig = live ? liveHlsConfig : vodHlsConfig;
     const base = live ? confLiveStability : confVod;
     return withCredentialsConfig(
@@ -1122,8 +1276,8 @@ var VideoPlayerBase = (props, ref) => {
       hlsCredentials
     );
   }, [hlsConfig, hlsCredentials, live, liveHlsConfig, vodHlsConfig]);
-  const loadVideo = useCallback(
-    async (startAt = initialTime, loadId = sourceLoadId.current) => {
+  const loadVideo = useCallback2(
+    async (startAt = ((_b) => (_b = ((_a) => (_a = resumeSnapshot.current) == null ? void 0 : _a.time)()) != null ? _b : initialTime)(), loadId = sourceLoadId.current) => {
       const startVideoRef = videoRef.current;
       if (!startVideoRef) return;
       sourceLoadMode.current = "hls";
@@ -1131,6 +1285,7 @@ var VideoPlayerBase = (props, ref) => {
       try {
         HlsCtor = await loadHlsCtor();
       } catch (error) {
+        if (loadId !== sourceLoadId.current || videoRef.current !== startVideoRef) return;
         reportError(error, { type: "hls-loader", src: videoSrc }, messages.streamLoadFailed);
         return;
       }
@@ -1142,10 +1297,11 @@ var VideoPlayerBase = (props, ref) => {
       hlsRef.current = h;
       const isStaleLoad = () => loadId !== sourceLoadId.current || hlsRef.current !== h || videoRef.current !== video;
       h.on(HlsCtor.Events.ERROR, (_evt, data) => {
-        var _a, _b;
+        var _a2, _b2;
         if (isStaleLoad()) return;
         const { type: errorType, details, fatal } = data;
-        if (details === HlsCtor.ErrorDetails.BUFFER_APPEND_ERROR || details === "bufferAppendingError") return;
+        if (onAudioError(data)) return;
+        if (!fatal && (details === HlsCtor.ErrorDetails.BUFFER_APPEND_ERROR || details === "bufferAppendingError")) return;
         if (!fatal) {
           switch (details) {
             case HlsCtor.ErrorDetails.BUFFER_STALLED_ERROR:
@@ -1157,7 +1313,7 @@ var VideoPlayerBase = (props, ref) => {
                 }, 200);
               }
               if (shouldSwitchLiveToStability()) {
-                const resumeTime2 = ((_a = videoRef.current) == null ? void 0 : _a.currentTime) || 0;
+                const resumeTime2 = ((_a2 = videoRef.current) == null ? void 0 : _a2.currentTime) || 0;
                 clearTimers();
                 reloadTimer.current = setTimeout(() => {
                   if (hlsRef.current) {
@@ -1172,7 +1328,7 @@ var VideoPlayerBase = (props, ref) => {
               return;
           }
         }
-        const resumeTime = ((_b = videoRef.current) == null ? void 0 : _b.currentTime) || 0;
+        const resumeTime = ((_b2 = videoRef.current) == null ? void 0 : _b2.currentTime) || 0;
         if (errorType === HlsCtor.ErrorTypes.NETWORK_ERROR) {
           if (netRetryCount.current < MAX_NET_RETRIES) {
             netRetryCount.current += 1;
@@ -1236,21 +1392,25 @@ var VideoPlayerBase = (props, ref) => {
       });
       h.on(HlsCtor.Events.MANIFEST_PARSED, () => {
         if (isStaleLoad()) return;
-        fatalReloadCount.current = 0;
-        netRetryCount.current = 0;
-        mediaRecoverCount.current = 0;
-        if (!live && startAt > 0) {
+        if (startAt > 0) {
           h.startLoad(startAt);
           video.currentTime = startAt;
         } else {
           h.startLoad();
         }
-        if (autoPlay) void playAction();
+        if (resumeSnapshot.current ? resumeSnapshot.current.playing : propsRef.current.autoPlay) void playAction();
+      });
+      h.on(HlsCtor.Events.FRAG_BUFFERED, (_evt, data) => {
+        if (isStaleLoad()) return;
+        if (data.frag.type === "audio") onAudioProgress();
       });
       h.attachMedia(video);
     },
     [
       autoPlay,
+      onAudioError,
+      onAudioProgress,
+      resumeSnapshot,
       clearErrorState,
       clearTimers,
       initialTime,
@@ -1265,21 +1425,23 @@ var VideoPlayerBase = (props, ref) => {
       videoSrc
     ]
   );
-  const loadVideoNative = useCallback(
+  const loadVideoNative = useCallback2(
     (loadId = sourceLoadId.current, options) => {
+      var _a, _b;
       if (loadId !== sourceLoadId.current) return;
       const video = videoRef.current;
       if (!video) return;
       sourceLoadMode.current = "native";
       video.src = videoSrc;
       if (!(options == null ? void 0 : options.metadataOnly)) {
-        video.currentTime = initialTime;
-        if (autoPlay) void playAction();
+        video.currentTime = (_b = (_a = resumeSnapshot.current) == null ? void 0 : _a.time) != null ? _b : initialTime;
+        if (resumeSnapshot.current ? resumeSnapshot.current.playing : propsRef.current.autoPlay) void playAction();
       }
     },
     [autoPlay, initialTime, playAction, videoSrc]
   );
-  const loadVideoHls = useCallback(async (loadId = sourceLoadId.current) => {
+  const loadVideoHls = useCallback2(async (loadId = sourceLoadId.current) => {
+    var _a, _b;
     const video = videoRef.current;
     const canNativeHls = !!(video == null ? void 0 : video.canPlayType) && video.canPlayType("application/vnd.apple.mpegurl") !== "";
     sourceLoadMode.current = "hls";
@@ -1287,13 +1449,14 @@ var VideoPlayerBase = (props, ref) => {
     try {
       HlsCtor = await loadHlsCtor();
     } catch (error) {
+      if (loadId !== sourceLoadId.current || videoRef.current !== video) return;
       reportError(error, { type: "hls-loader", src: videoSrc }, messages.streamLoadFailed);
       return;
     }
     if (loadId !== sourceLoadId.current) return;
     if (!videoRef.current || videoRef.current !== video) return;
     if (HlsCtor.isSupported()) {
-      void loadVideo(initialTime, loadId);
+      void loadVideo((_b = (_a = resumeSnapshot.current) == null ? void 0 : _a.time) != null ? _b : initialTime, loadId);
       return;
     }
     if (canNativeHls) {
@@ -1302,7 +1465,8 @@ var VideoPlayerBase = (props, ref) => {
     }
     reportError(null, { type: "hls", src: videoSrc, reason: "HLS is not supported in this browser" }, messages.unsupported);
   }, [initialTime, loadVideo, loadVideoNative, messages.streamLoadFailed, messages.unsupported, reportError, videoSrc]);
-  const destroy = useCallback(() => {
+  const destroy = useCallback2(() => {
+    var _a, _b;
     clearTimers();
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -1318,27 +1482,25 @@ var VideoPlayerBase = (props, ref) => {
       if (activeExclusiveVideo === v) activeExclusiveVideo = null;
     }
     videoRef.current = null;
-    onVideoRefChange == null ? void 0 : onVideoRefChange(null);
+    (_b = (_a = propsRef.current).onVideoRefChange) == null ? void 0 : _b.call(_a, null);
     notifyActiveChange(null, "destroy");
     setNextPlaying(false);
-    if (durationProp === void 0) setDurationState(0);
+    if (propsRef.current.duration === void 0) setDurationState(0);
     setCurrentTimeUi.current.cancel();
     setCurrentTimeState(0);
   }, [
     clearTimers,
-    durationProp,
     notifyActiveChange,
     onDur,
     onTime,
-    onVideoRefChange,
     setNextPlaying
   ]);
-  const videoClickHandler = useCallback(() => {
+  const videoClickHandler = useCallback2(() => {
     if (!handleClick) return;
     if (playOnClick) toggleAction();
     onVideoClick == null ? void 0 : onVideoClick();
   }, [handleClick, onVideoClick, playOnClick, toggleAction]);
-  const fullScreenAction = useCallback(() => {
+  const fullScreenAction = useCallback2(() => {
     if (typeof document === "undefined") return;
     const doc = document;
     const videoEl = videoRef.current;
@@ -1363,33 +1525,51 @@ var VideoPlayerBase = (props, ref) => {
       else if (videoEl.webkitEnterFullscreen) void videoEl.webkitEnterFullscreen();
     }
   }, [fullscreenAllowed]);
-  const videoDbClickHandler = useCallback(() => {
+  const videoDbClickHandler = useCallback2(() => {
     if (!handleClick) return;
     fullScreenAction();
     onVideoDoubleClick == null ? void 0 : onVideoDoubleClick();
   }, [fullScreenAction, handleClick, onVideoDoubleClick]);
-  const showClickHandler = useCallback(() => {
+  const showClickHandler = useCallback2(() => {
     setControlVisible((st) => !st);
   }, []);
-  const retryLoadHandler = useCallback(() => {
+  const retryLoadHandler = useCallback2(() => {
     clearErrorState();
     setReloadToken((value) => value + 1);
   }, [clearErrorState]);
-  const videoErrorHandler = useCallback(() => {
+  const videoErrorHandler = useCallback2(() => {
     const video = videoRef.current;
     const error = video == null ? void 0 : video.error;
     const src = (video == null ? void 0 : video.currentSrc) || videoSrc;
     if (hlsRef.current && src.startsWith("blob:")) return;
+    if (switchSource(true, true)) return;
     pendingPlay.current = false;
     reportError(error, { type: "native", src }, getNativeVideoErrorMessage(error, messages));
-  }, [messages, reportError, videoSrc]);
-  const videoLoadedHandler = useCallback(() => {
+  }, [messages, reportError, switchSource, videoSrc]);
+  const videoLoadedHandler = useCallback2(() => {
     clearErrorState();
+    const saved = resumeSnapshot.current;
+    const element = videoRef.current;
+    if (saved && element && element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      let time = saved.time;
+      if (element.seekable.length) {
+        const start = element.seekable.start(0);
+        const end = element.seekable.end(element.seekable.length - 1);
+        time = Math.max(start, Math.min(time, Math.max(start, end - 0.05)));
+      }
+      element.currentTime = time;
+      element.playbackRate = saved.rate;
+      element.volume = saved.volume;
+      element.muted = saved.muted;
+      resumeSnapshot.current = null;
+      if (saved.playing) void playAction();
+      else pauseAction();
+    }
     if (playRequestInFlight.current) return;
     if (!pendingPlay.current || active === false || !canAttemptPlayback(videoRef.current)) return;
     void playAction();
-  }, [active, clearErrorState, playAction]);
-  const mouseMoveHandler = useCallback(() => {
+  }, [active, clearErrorState, playAction, pauseAction, resumeSnapshot]);
+  const mouseMoveHandler = useCallback2(() => {
     if (controlTime.current) clearTimeout(controlTime.current);
     if (!showControlRef.current) {
       showControlRef.current = true;
@@ -1411,22 +1591,26 @@ var VideoPlayerBase = (props, ref) => {
     }),
     [fullScreenAction, pauseAction, playAction, seekSetTime]
   );
-  useEffect(() => {
+  useEffect2(() => {
     const el = videoRef.current;
     if (!el) return;
     el.muted = muted;
   }, [muted]);
-  useEffect(() => {
+  useEffect2(() => {
     if (playingProp === void 0) return;
     if (playingProp) void playAction();
     else pauseAction();
   }, [pauseAction, playAction, playingProp]);
-  useEffect(() => {
+  useEffect2(() => {
     if (active !== false) return;
     releaseNativeMedia();
   }, [active, releaseNativeMedia]);
-  useEffect(() => {
+  const sourceLoaders = useRef3({ loadVideo, loadVideoHls, loadVideoNative });
+  sourceLoaders.current = { loadVideo, loadVideoHls, loadVideoNative };
+  useEffect2(() => {
+    var _a, _b, _c, _d;
     if (!videoRef.current) return;
+    const { loadVideo: loadVideo2, loadVideoHls: loadVideoHls2, loadVideoNative: loadVideoNative2 } = sourceLoaders.current;
     const loadId = sourceLoadId.current + 1;
     sourceLoadId.current = loadId;
     clearErrorState();
@@ -1435,20 +1619,21 @@ var VideoPlayerBase = (props, ref) => {
     mediaRecoverCount.current = 0;
     liveStabilityMode.current = false;
     liveStallEvents.current = [];
+    lastProgressTime.current = (_b = (_a = resumeSnapshot.current) == null ? void 0 : _a.time) != null ? _b : initialTime;
     resetMediaForSourceChange();
     const nextSourceLoadMode = getSourceLoadMode(sourceType, type, videoSrc);
     sourceLoadMode.current = nextSourceLoadMode;
     if (active === false) {
       if (nextSourceLoadMode === "native" && preload === "metadata") {
-        loadVideoNative(loadId, { metadataOnly: true });
+        loadVideoNative2(loadId, { metadataOnly: true });
       }
       return;
     }
     if (nextSourceLoadMode === "hls") {
-      if (sourceType === "hls") void loadVideo(initialTime, loadId);
-      else void loadVideoHls(loadId);
+      if (sourceType === "hls") void loadVideo2((_d = (_c = resumeSnapshot.current) == null ? void 0 : _c.time) != null ? _d : initialTime, loadId);
+      else void loadVideoHls2(loadId);
     } else {
-      loadVideoNative(loadId);
+      loadVideoNative2(loadId);
     }
     return () => {
       sourceLoadId.current += 1;
@@ -1457,9 +1642,6 @@ var VideoPlayerBase = (props, ref) => {
   }, [
     clearErrorState,
     active,
-    loadVideo,
-    loadVideoHls,
-    loadVideoNative,
     initialTime,
     resetMediaForSourceChange,
     reloadKey,
@@ -1468,12 +1650,16 @@ var VideoPlayerBase = (props, ref) => {
     type,
     videoSrc
   ]);
-  useEffect(() => {
-    if (!autoPlay) return;
-    if (!canAttemptPlayback(videoRef.current)) return;
-    void playAction();
+  useEffect2(() => {
+    if (resumeSnapshot.current) return;
+    if (!canAttemptPlayback(videoRef.current)) {
+      pendingPlay.current = Boolean(autoPlay);
+      playbackIntent.current = Boolean(autoPlay);
+      return;
+    }
+    if (autoPlay) void playAction();
   }, [autoPlay, playAction]);
-  useEffect(() => {
+  useEffect2(() => {
     if (typeof document === "undefined") return;
     const handleKeyDown = (event) => {
       if (event.code !== "KeyF") return;
@@ -1488,7 +1674,7 @@ var VideoPlayerBase = (props, ref) => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [active, fullScreenAction]);
-  useEffect(() => {
+  useEffect2(() => {
     if (typeof document === "undefined") return;
     const doc = document;
     const handleFsChange = () => {
@@ -1506,15 +1692,15 @@ var VideoPlayerBase = (props, ref) => {
       document.removeEventListener("MSFullscreenChange", handleFsChange);
     };
   }, []);
-  useEffect(() => {
+  useEffect2(() => {
     return () => {
       setTimeD.current.cancel();
       setCurrentTimeUi.current.cancel();
       destroy();
     };
   }, [destroy]);
-  const lastActiveState = useRef2(active);
-  useEffect(() => {
+  const lastActiveState = useRef3(active);
+  useEffect2(() => {
     const prevActive = lastActiveState.current;
     lastActiveState.current = active;
     if (active === true && prevActive !== true) {
@@ -1559,8 +1745,16 @@ var VideoPlayerBase = (props, ref) => {
               muted,
               preload,
               loop,
-              onPlay: () => setNextPlaying(true),
-              onPause: () => setNextPlaying(false),
+              onPlay: () => {
+                playbackIntent.current = true;
+                setNextPlaying(true);
+              },
+              onPause: () => {
+                if (!resumeSnapshot.current) {
+                  playbackIntent.current = false;
+                  setNextPlaying(false);
+                }
+              },
               onEnded: () => setNextPlaying(false),
               onLoadedMetadata: videoLoadedHandler,
               onLoadedData: videoLoadedHandler,
@@ -1571,6 +1765,7 @@ var VideoPlayerBase = (props, ref) => {
               poster
             }
           ),
+          audioFallback.videoOnly && /* @__PURE__ */ jsx2("div", { role: "status", className: "video-audio-status", children: "\u0417\u0432\u0443\u043A \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D" }),
           errorState && /* @__PURE__ */ jsx2("div", { className: "video-error-overlay", children: /* @__PURE__ */ jsxs2("div", { className: "video-error-content", children: [
             /* @__PURE__ */ jsx2("div", { className: "video-error-title", children: errorState.message }),
             errorState.details.length > 0 && /* @__PURE__ */ jsx2("div", { className: "video-error-details", children: errorState.details.map((detail) => /* @__PURE__ */ jsx2("div", { className: "video-error-detail", children: detail }, detail)) }),
