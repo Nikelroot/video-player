@@ -8,6 +8,44 @@ Standalone React video player with HLS support, retry/recovery behavior, fullscr
 npm install @nikelroot/video-player
 ```
 
+## GitLab CI and automatic npm releases
+
+The repository is hosted at https://gitlab.nikelroot.ru/home/nvideoplayer.
+Every push to the default branch runs validation and publishes a new public
+version of `@nikelroot/video-player` to npmjs.com. Merge requests and other
+branches only run validation. Tag pipelines are disabled.
+
+The release chooses the highest stable version from `package.json` and npm,
+then increases its patch number (for example, `0.3.2` → `0.3.3`). It commits
+`package.json` and `package-lock.json`, creates `v<version>`, and pushes both
+atomically before publishing. The bot commit contains `[skip ci]` to avoid
+a release loop. Releases are serialized; pipelines for outdated commits skip
+publication. To recover from an npm failure, retry the failed `publish` job
+before pushing new changes: it reuses the saved version. If the version has
+already been published, the retry completes without publishing again.
+
+One-time setup in GitLab:
+
+1. Configure a Docker-compatible runner capable of using `node:24-bookworm`.
+2. Protect the default branch (usually `main`).
+3. In **Settings → CI/CD → Variables**, add these **Masked** and **Protected**
+   variables with variable expansion disabled:
+   - `NPM_TOKEN`: an npm granular access token with read/write permission for
+     `@nikelroot/video-player` and **Bypass two-factor authentication** enabled.
+     The package publishing settings must permit token publishing. Renew the
+     token before its expiration.
+   - `GITLAB_PUSH_TOKEN`: a project access token with `write_repository` scope
+     and a role allowed to push to the protected default branch and release
+     tags. A personal access token with equivalent permissions also works.
+4. Ensure branch/tag protection permits the token owner to push to the default
+   branch and create `v*` tags.
+5. Push the repository and CI configuration to GitLab. Do not add secrets to Git.
+
+This self-hosted GitLab uses token authentication because npm trusted publishing
+currently supports GitLab.com shared runners only. See the
+[npm CI token guide](https://docs.npmjs.com/using-private-packages-in-a-ci-cd-workflow/)
+and [trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
+
 Peer dependencies:
 
 ```bash
